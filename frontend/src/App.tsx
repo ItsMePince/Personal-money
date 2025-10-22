@@ -12,6 +12,7 @@ import Income from "./pages/income";
 import Expense from "./pages/expense";
 import Summary from "./pages/summary";
 import Location from "./pages/Location";
+import More from "./pages/more";
 
 //  เพิ่ม: Route ตัวเชื่อมไปหน้าเดิมสำหรับโหมดแก้ไข
 import ExpenseEdit from "./pages/expense.edit";
@@ -244,7 +245,14 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
+          <Route
+              path="/more"
+              element={
+                  <ProtectedRoute>
+                      <More />
+                  </ProtectedRoute>
+              }
+          />
         {/* 404 */}
         <Route path="*" element={<NotFound />} />
       </Routes>
