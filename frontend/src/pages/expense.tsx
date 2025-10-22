@@ -23,6 +23,7 @@ import { useEditPrefill } from "../hooks/useEditPrefill";
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string) || "http://localhost:8081";
 
+/* ===== draft helpers ===== */
 const DRAFT_KEY = "expense_draft_v2";
 const safeParse = (raw: any) => { try { return JSON.parse(raw ?? ""); } catch { return {}; } };
 const readDraftNow = () => safeParse(sessionStorage.getItem(DRAFT_KEY));
@@ -34,15 +35,16 @@ const saveDraft = (patch: Record<string, any>) => {
 type Category = "อาหาร" | "ค่าเดินทาง" | "ของขวัญ" | "อื่นๆ";
 
 const getTodayISO = () => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`;
 };
 const getNowHHMM = () => {
-    const now = new Date();
-    return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const n = new Date();
+    return `${String(n.getHours()).padStart(2,"0")}:${String(n.getMinutes()).padStart(2,"0")}`;
 };
 const getNowLocalDT = () => `${getTodayISO()}T${getNowHHMM()}`;
 
+/* icons */
 const customIconByKey: Record<string, React.FC<any>> = {
     food: Utensils, pizza: Pizza, drumstick: Drumstick, coffee: Coffee, beer: Beer,
     cupsoda: CupSoda, icecream: IceCream, candy: Candy, cake: Cake,
@@ -75,18 +77,18 @@ const defaultIconKeyByCategory: Record<Category, string> = {
 
 const ChevronDown = () => (
     <svg viewBox="0 0 24 24" className="icon">
-        <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
 );
 const IconBackspace = () => (
     <svg viewBox="0 0 24 24" className="icon">
         <path d="M4 12 9 6h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9L4 12Zm6-3 6 6m0-6-6 6"
-              stroke="currentColor" strokeWidth="1.7" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              stroke="currentColor" strokeWidth="1.7" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
 );
 const IconCheck = () => (
     <svg viewBox="0 0 24 24" className="icon">
-        <path d="m5 12 4 4 10-10" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="m5 12 4 4 10-10" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
 );
 
@@ -100,15 +102,15 @@ export default function Expense() {
     const [category, setCategory] = useState<Category>(() =>
         draft.category ?? (tempCategory ? "อื่นๆ" : "อาหาร")
     );
-    const [amount, setAmount] = useState<string>(() => draft.amount ?? "0");
-    const [note, setNote] = useState<string>(() => draft.note ?? "");
-    const [place, setPlace] = useState<string>(() => draft.place ?? "");
-    const [dt, setDt] = useState<string>(() => draft.dt ?? getNowLocalDT());
+    const [amount, setAmount]   = useState<string>(() => draft.amount ?? "0");
+    const [note, setNote]       = useState<string>(() => draft.note ?? "");
+    const [place, setPlace]     = useState<string>(() => draft.place ?? "");
+    const [dt, setDt]           = useState<string>(() => draft.dt ?? getNowLocalDT());
 
     const [hydrated, setHydrated] = useState(false);
     useEffect(() => { setHydrated(true); }, []);
 
-    // Prefill (edit mode from Summary)
+    /* ===== Prefill edit mode (from Summary) ===== */
     useEditPrefill((d) => {
         setCategory((d.category as Category) ?? "อื่นๆ");
         setAmount(String(d.amount ?? "0"));
@@ -117,7 +119,7 @@ export default function Expense() {
         setDt(d.datetime || `${d.date}T${getNowHHMM()}`);
     }, "edit_id_expense");
 
-    // bring back selected place from /location
+    /* ===== pick place from /location (comes back via sessionStorage) ===== */
     useEffect(() => {
         const apply = () => {
             const name = sessionStorage.getItem("selectedPlaceName");
@@ -127,12 +129,12 @@ export default function Expense() {
                 sessionStorage.removeItem("selectedPlaceName");
             }
         };
-        apply();                           // run on mount
-        window.addEventListener("focus", apply); // run when tab refocus (after navigating back)
+        apply();
+        window.addEventListener("focus", apply);
         return () => window.removeEventListener("focus", apply);
     }, []);
 
-    // type switcher
+    /* ===== switch entry type ===== */
     const [typeOpen, setTypeOpen] = useState(false);
     const [entryType] = useState<"ค่าใช้จ่าย" | "รายได้">("ค่าใช้จ่าย");
     const menuOptions: Array<"ค่าใช้จ่าย" | "รายได้"> = entryType === "ค่าใช้จ่าย" ? ["รายได้"] : ["ค่าใช้จ่าย"];
@@ -141,6 +143,7 @@ export default function Expense() {
         navigate(target === "รายได้" ? "/income" : "/expense");
     };
 
+    /* ===== sync category when coming from custom ===== */
     useEffect(() => {
         if (tempCategory && category !== "อื่นๆ") {
             setCategory("อื่นๆ");
@@ -148,11 +151,13 @@ export default function Expense() {
         }
     }, [tempCategory]);
 
+    /* ===== auto-save draft ===== */
     useEffect(() => {
         if (!hydrated) return;
         saveDraft({ category, amount, note, place, dt });
     }, [category, amount, note, place, dt, hydrated]);
 
+    /* ===== datetime picker ===== */
     const dtRef = useRef<HTMLInputElement>(null);
     const openDateTimePicker = (e?: React.MouseEvent | React.KeyboardEvent) => {
         e?.preventDefault();
@@ -162,16 +167,16 @@ export default function Expense() {
         else { el.click(); el.focus(); }
     };
 
-    const pad = useMemo(() => ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "⌫"], []);
+    /* ===== keypad + typeable amount ===== */
+    const pad = useMemo(() => ["1","2","3","4","5","6","7","8","9",".","0","⌫"], []);
     const onTapKey = (k: string) => {
         let next = amount;
-        if (k === "⌫") next = next.length <= 1 ? "0" : next.slice(0, -1);
+        if (k === "⌫") next = next.length <= 1 ? "0" : next.slice(0,-1);
         else if (k === ".") next = next.includes(".") ? next : next + ".";
         else next = next === "0" ? k : next + k;
         setAmount(next);
         saveDraft({ amount: next });
     };
-
     const sanitizeAmount = (raw: string) => {
         let v = raw.replace(/[^\d.]/g, "");
         const parts = v.split(".");
@@ -186,6 +191,7 @@ export default function Expense() {
         saveDraft({ amount: v });
     };
 
+    /* ===== reset ===== */
     const resetForm = () => {
         setCategory("อาหาร"); setAmount("0"); setNote(""); setPlace("");
         setDt(getNowLocalDT());
@@ -194,7 +200,9 @@ export default function Expense() {
         sessionStorage.removeItem("edit_id_expense");
     };
 
+    /* ===== submit to backend ===== */
     const onConfirm = async () => {
+        // note optional; require amount>0, place, dt
         if (!amount || amount === "0" || !place.trim() || !dt) {
             alert("Required ❌");
             return;
@@ -206,17 +214,18 @@ export default function Expense() {
         const iconKey =
             category === "อื่นๆ" ? (tempCategory?.iconKey || "more") : defaultIconKeyByCategory[category];
 
-        const dateOnly = dt.slice(0, 10);
-        const occurredAtISO = new Date(`${dt}:00`).toISOString();
+        const dateOnly = dt.slice(0, 10); // "YYYY-MM-DD"
+        const occurredAtISO = new Date(`${dt}:00`).toISOString(); // local -> ISO UTC
 
+        // >>> Backend expects EntryType enum: EXPENSE/INCOME
         const payload = {
-            type: "ค่าใช้จ่าย",
+            type: "EXPENSE",
             category: finalCategory,
             amount: parseFloat(amount || "0"),
-            note,
+            note,                 // may be ""
             place,
-            date: dateOnly,
-            occurredAt: occurredAtISO,
+            date: dateOnly,       // LocalDate
+            occurredAt: occurredAtISO, // OffsetDateTime
             paymentMethod: payment?.name ?? null,
             iconKey,
         };
@@ -234,7 +243,7 @@ export default function Expense() {
                 credentials: "include",
             });
             if (!res.ok) throw new Error(await res.text());
-            alert(isEdit ? "แก้ไขเรียบร้อย " : "บันทึกเรียบร้อย ");
+            alert(isEdit ? "แก้ไขเรียบร้อย ✅" : "บันทึกเรียบร้อย ✅");
             resetForm();
             navigate("/summary");
         } catch (err: any) {
@@ -262,16 +271,20 @@ export default function Expense() {
                     <span>{entryType}</span><ChevronDown />
                 </button>
                 {typeOpen && (
-                    <div onMouseLeave={() => setTypeOpen(false)}
-                         style={{
-                             position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#fff",
-                             border: "1px solid rgba(0,0,0,.06)", borderRadius: 14, boxShadow: "0 10px 20px rgba(0,0,0,.08)", padding: 6, minWidth: 200, zIndex: 20
-                         }}>
+                    <div
+                        onMouseLeave={() => setTypeOpen(false)}
+                        style={{
+                            position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#fff",
+                            border: "1px solid rgba(0,0,0,.06)", borderRadius: 14, boxShadow: "0 10px 20px rgba(0,0,0,.08)", padding: 6, minWidth: 200, zIndex: 20
+                        }}>
                         {menuOptions.map(op => (
-                            <button key={op} onClick={() => onSelectType(op)}
-                                    style={{ width: "100%", textAlign: "center", padding: "10px 12px", border: 0, background: "transparent", borderRadius: 10, cursor: "pointer", fontWeight: 600, color: "var(--ink)" as any }}
-                                    onMouseEnter={e => e.currentTarget.style.background = "#f3fbf8"}
-                                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                            <button
+                                key={op}
+                                onClick={() => onSelectType(op)}
+                                style={{ width: "100%", textAlign: "center", padding: "10px 12px", border: 0, background: "transparent", borderRadius: 10, cursor: "pointer", fontWeight: 600, color: "var(--ink)" as any }}
+                                onMouseEnter={e => e.currentTarget.style.background = "#f3fbf8"}
+                                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                            >
                                 {op}
                             </button>
                         ))}
@@ -316,7 +329,7 @@ export default function Expense() {
                 <span className="currency">฿</span>
             </div>
 
-            {/* segments: datetime + payment */}
+            {/* date-time + payment */}
             <div className="segments" style={{ position: "relative", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <button
                     type="button"
@@ -339,15 +352,18 @@ export default function Expense() {
                     />
                 </button>
 
-                <button className="seg" onClick={() => {
-                    saveDraft({ category, amount, note, place, dt });
-                    navigate("/accountselect");
-                }}>
+                <button
+                    className="seg"
+                    onClick={() => {
+                        saveDraft({ category, amount, note, place, dt });
+                        navigate("/accountselect");
+                    }}
+                >
                     {payment?.name ?? "ประเภทการชำระเงิน"}
                 </button>
             </div>
 
-            {/* inputs */}
+            {/* note/place */}
             <div className="inputs">
                 <div className="input">
                     <ClipboardList size={18} strokeWidth={2} className="icon" />
@@ -360,19 +376,15 @@ export default function Expense() {
                 </div>
                 <div className="input" onClick={() => navigate("/location")} style={{ cursor: "pointer" }}>
                     <MapPin size={18} strokeWidth={2} className="icon" />
-                    <input
-                        value={place}
-                        readOnly
-                        placeholder="สถานที่"
-                    />
+                    <input value={place} readOnly placeholder="สถานที่" />
                 </div>
             </div>
 
             {/* keypad */}
             <div className="keypad">
-                {pad.map((k, i) => (
-                    <button key={i} className={`key ${k === "⌫" ? "danger" : ""}`} onClick={() => onTapKey(k)}>
-                        {k === "⌫" ? <IconBackspace /> : k}
+                {pad.map((k,i)=>(
+                    <button key={i} className={`key ${k==="⌫"?"danger":""}`} onClick={()=> onTapKey(k)}>
+                        {k==="⌫" ? <IconBackspace/> : k}
                     </button>
                 ))}
             </div>
