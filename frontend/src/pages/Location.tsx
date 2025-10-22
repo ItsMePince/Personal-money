@@ -25,9 +25,7 @@ function loadLongdo(): Promise<void> {
 }
 
 async function geocode(q: string): Promise<Place[]> {
-    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=12&q=${encodeURIComponent(
-        q
-    )}`;
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=12&q=${encodeURIComponent(q)}`;
     const res = await fetch(url, { headers: { "Accept-Language": "th" } });
     const rows = (await res.json()) as any[];
     return rows.map((r) => ({
@@ -61,17 +59,17 @@ function LocationIcon() {
     return (
         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style={{ flex: "0 0 auto" }}>
             <path d="M12 22s7-7.06 7-12a7 7 0 1 0-14 0c0 4.94 7 12 7 12Z" fill="currentColor" opacity="0.2" />
-            <path
-                d="M12 22s7-7.06 7-12a7 7 0 1 0-14 0c0 4.94 7 12 7 12Z"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
+            <path d="M12 22s7-7.06 7-12a7 7 0 1 0-14 0c0 4.94 7 12 7 12Z" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
             <circle cx="12" cy="10" r="2.5" fill="currentColor" />
         </svg>
     );
+}
+
+function splitLabel(label: string) {
+    const [name, ...restArr] = label.split(",");
+    const nameTrim = name?.trim() || label;
+    const rest = restArr.join(", ").trim();
+    return { name: nameTrim, rest };
 }
 
 export default function Location() {
@@ -156,7 +154,7 @@ export default function Location() {
                     }))
                     : rows;
             setSuggested(withDist);
-        }, 280);
+        }, 250);
         return () => clearTimeout(t);
     }, [searching, query, current?.lat, current?.lon]);
 
@@ -191,7 +189,7 @@ export default function Location() {
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="ที่อยู่ปัจจุบัน"
                     className="search-input"
-                    style={{ fontWeight: 400 }} /* ไม่ต้องตัวหนา */
+                    style={{ fontWeight: 400 }}
                 />
                 <button className="search-icon" onClick={() => setSearching(true)}>
                     <svg width="18" height="18" viewBox="0 0 24 24">
@@ -209,33 +207,30 @@ export default function Location() {
             <div className="suggest-title">Suggested</div>
 
             <div className="list" style={{ paddingBottom: 8 }}>
-                {visibleSuggested.map((s, i) => (
-                    <button
-                        key={`${s.lat}-${s.lon}-${i}`}
-                        className="place-row"
-                        onClick={() => moveTo(s)}
-                        style={{ padding: "8px 6px" }} /* ลด padding ให้ไม่เบียด navbar */
-                    >
-                        <div className="place-left" style={{ gap: 10 }}>
-                            <LocationIcon />
-                            <div className="place-texts" style={{ maxWidth: 280 }}>
-                                <div className="place-label" style={{ fontWeight: 400, fontSize: "0.95rem", lineHeight: 1.3 }}>
-                                    {s.label}
+                {visibleSuggested.map((s, i) => {
+                    const { name, rest } = splitLabel(s.label);
+                    return (
+                        <button
+                            key={`${s.lat}-${s.lon}-${i}`}
+                            className="place-row"
+                            onClick={() => moveTo(s)}
+                            style={{ padding: "8px 6px" }}
+                        >
+                            <div className="place-left" style={{ gap: 10 }}>
+                                <LocationIcon />
+                                <div className="place-texts" style={{ maxWidth: 280 }}>
+                                    <div className="place-label" style={{ fontWeight: 600, fontSize: "0.98rem", lineHeight: 1.25 }}>
+                                        {name}
+                                    </div>
+                                    <div className="place-sub" style={{ fontSize: ".85rem" }}>
+                                        {typeof s.distKm === "number" ? `${Math.round(s.distKm)} km` : ""}{typeof s.distKm === "number" && rest ? " • " : ""}{rest}
+                                    </div>
                                 </div>
-                                {typeof s.distKm === "number" ? (
-                                    <div className="place-sub" style={{ fontSize: ".85rem" }}>
-                                        {Math.round(s.distKm)} km
-                                    </div>
-                                ) : current && picked ? (
-                                    <div className="place-sub" style={{ fontSize: ".85rem" }}>
-                                        {Math.round(distanceKm(current, s || picked))} km
-                                    </div>
-                                ) : null}
                             </div>
-                        </div>
-                        <span className="more">⋯</span>
-                    </button>
-                ))}
+                            <span className="more">⋯</span>
+                        </button>
+                    );
+                })}
             </div>
 
             {searching && (
@@ -243,36 +238,35 @@ export default function Location() {
                     {suggested.length === 0 ? (
                         <div className="empty">ไม่พบสถานที่</div>
                     ) : (
-                        suggested.map((s, i) => (
-                            <button
-                                key={`ov-${s.lat}-${s.lon}-${i}`}
-                                className="place-row overlay"
-                                onClick={() => moveTo(s)}
-                                style={{ padding: "10px 8px" }}
-                            >
-                                <div className="place-left" style={{ gap: 10 }}>
-                                    <LocationIcon />
-                                    <div className="place-texts">
-                                        <div className="place-label" style={{ fontWeight: 400, fontSize: "0.95rem" }}>
-                                            {s.label}
-                                        </div>
-                                        {typeof s.distKm === "number" && (
-                                            <div className="place-sub" style={{ fontSize: ".85rem" }}>
-                                                {Math.round(s.distKm)} km
+                        suggested.map((s, i) => {
+                            const { name, rest } = splitLabel(s.label);
+                            return (
+                                <button
+                                    key={`ov-${s.lat}-${s.lon}-${i}`}
+                                    className="place-row overlay"
+                                    onClick={() => moveTo(s)}
+                                    style={{ padding: "12px 12px" }}
+                                >
+                                    <div className="place-left" style={{ gap: 10 }}>
+                                        <LocationIcon />
+                                        <div className="place-texts">
+                                            <div className="place-label" style={{ fontWeight: 600, fontSize: "0.98rem" }}>
+                                                {name}
                                             </div>
-                                        )}
+                                            <div className="place-sub" style={{ fontSize: ".85rem" }}>
+                                                {typeof s.distKm === "number" ? `${Math.round(s.distKm)} km` : ""}{typeof s.distKm === "number" && rest ? " • " : ""}{rest}
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </button>
-                        ))
+                                </button>
+                            );
+                        })
                     )}
                 </div>
             )}
 
             <div className="confirm-wrap">
-                <button className="confirm-btn" onClick={confirm}>
-                    ยืนยันที่อยู่
-                </button>
+                <button className="confirm-btn" onClick={confirm}>ยืนยันที่อยู่</button>
             </div>
         </div>
     );
