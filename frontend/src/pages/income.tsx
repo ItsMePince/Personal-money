@@ -18,11 +18,11 @@ import {
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { usePaymentMethod } from "../PaymentMethodContext";
+import { useEditPrefill } from "../hooks/useEditPrefill";
 
 const API_BASE =
     (import.meta.env.VITE_API_BASE as string) || "http://localhost:8081";
 
-/* inline icons */
 const ChevronDown = () => (
     <svg viewBox="0 0 24 24" className="icon">
         <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
@@ -47,7 +47,6 @@ const IconCheck = () => (
     </svg>
 );
 
-/** รายได้เท่านั้น */
 type Category = "ค่าขนม" | "ทำงาน" | "ลงทุน" | "อื่นๆ";
 
 const ICON_MAP: Record<string, React.FC<any>> = {
@@ -73,7 +72,6 @@ const getNowHHMM = () => {
 };
 const getNowLocalDT = () => `${getTodayISO()}T${getNowHHMM()}`;
 
-/** iconKey มาตรฐานสำหรับหมวดรายได้ */
 const defaultIconKeyByCategory: Record<Category, string> = {
     "ค่าขนม": "HandCoins",
     "ทำงาน": "Banknote",
@@ -81,7 +79,6 @@ const defaultIconKeyByCategory: Record<Category, string> = {
     "อื่นๆ": "more",
 };
 
-/* ---------- draft helpers (merge & hydrate-safe) ---------- */
 const DRAFT_KEY = "income_draft_v2";
 const safeParse = (raw: any) => { try { return JSON.parse(raw ?? ""); } catch { return {}; } };
 const readDraftNow = () => safeParse(sessionStorage.getItem(DRAFT_KEY));
@@ -89,14 +86,12 @@ const saveDraft = (patch: Record<string, any>) => {
     const cur = readDraftNow();
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ...cur, ...patch }));
 };
-/* --------------------------------------------------------- */
 
 export default function Income() {
     const navigate = useNavigate();
     const location = useLocation();
     const { payment, setPayment } = usePaymentMethod();
 
-    // ---- Hydrate draft before first render ----
     const initial = readDraftNow();
 
     const [category, setCategory] = useState<Category>(() => initial.category ?? "ค่าขนม");
@@ -104,17 +99,24 @@ export default function Income() {
     const [amount, setAmount] = useState<string>(() => initial.amount ?? "0");
     const [note, setNote] = useState<string>(() => initial.note ?? "");
     const [place, setPlace] = useState<string>(() => initial.place ?? "");
-    // ✅ ใช้ช่องเดียว วัน+เวลา
     const [dt, setDt] = useState<string>(() => initial.dt ?? getNowLocalDT());
     const [menuOpen, setMenuOpen] = useState(false);
 
-    // restore payment from draft (ถ้ามี)
+    //  Prefill จาก Summary — ใช้ d.datetime ก่อน ถ้าไม่มีค่อย fallback
+    useEditPrefill((d) => {
+        setCategory((d.category as Category) ?? "ค่าขนม");
+        setCustomCat(null);
+        setAmount(String(d.amount ?? "0"));
+        setNote(d.note ?? "");
+        setPlace(d.place ?? "");
+        setDt(d.datetime || `${d.date}T${getNowHHMM()}`);
+    }, "edit_id_income");
+
     useEffect(() => {
         if (initial.payment && !payment) setPayment(initial.payment);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // รับค่าจากหน้า customincome
     useEffect(() => {
         const st = location.state as any;
         if (st?.customIncome) {
@@ -126,7 +128,6 @@ export default function Income() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.state]);
 
-    // ------ Write-through saves (ทุกการเปลี่ยน) ------
     const sanitizeAmount = (raw: string) => {
         let v = raw.replace(/[^\d.]/g, "");
         const parts = v.split(".");
@@ -151,7 +152,6 @@ export default function Income() {
         saveDraft({ amount: next });
     };
 
-    // ให้ปุ่มวันที่เวลาเปิด picker ได้ทุกเบราว์เซอร์
     const dtRef = useRef<HTMLInputElement>(null);
     const openDateTimePicker = (e?: React.MouseEvent | React.KeyboardEvent) => {
         e?.preventDefault();
@@ -165,15 +165,14 @@ export default function Income() {
         setCategory("ค่าขนม"); setCustomCat(null); setPayment(null);
         setAmount("0"); setNote(""); setPlace(""); setDt(getNowLocalDT()); setMenuOpen(false);
         sessionStorage.removeItem(DRAFT_KEY);
+        sessionStorage.removeItem("edit_id_income");
     };
 
     const onConfirm = async () => {
-        // ✅ note ไม่บังคับ (เหมือนหน้า Expense)
         if (!amount || amount === "0" || !place.trim() || !dt) {
             alert("Required ❌"); return;
         }
         const finalCategory = category === "อื่นๆ" && customCat?.label ? customCat.label : category;
-
         const iconKey =
             category === "อื่นๆ"
                 ? (customCat?.icon || "more")
@@ -186,24 +185,30 @@ export default function Income() {
             type: "รายได้",
             category: finalCategory,
             amount: parseFloat(amount || "0"),
-            note,                 // อนุญาตให้เป็น "" ได้
+            note,
             place,
-            date: dateOnly,       // คงค่า date เดิมให้ BE ที่ยังใช้ได้
-            occurredAt: occurredAtISO, // เพิ่มเขตเวลาแบบ ISO
+            date: dateOnly,
+            occurredAt: occurredAtISO,
             paymentMethod: payment?.name ?? null,
             iconKey,
         };
 
+        const editId = sessionStorage.getItem("edit_id_income");
+        const isEdit = !!editId;
+        const url = isEdit ? `${API_BASE}/api/expenses/${editId}` : `${API_BASE}/api/expenses`;
+        const method = isEdit ? "PUT" : "POST";
+
         try {
-            const res = await fetch(`${API_BASE}/api/expenses`, {
-                method: "POST",
+            const res = await fetch(url, {
+                method,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
                 credentials: "include",
             });
             if (!res.ok) throw new Error(await res.text());
-            alert("บันทึกเรียบร้อย ✅");
+            alert(isEdit ? "แก้ไขเรียบร้อย " : "บันทึกเรียบร้อย ");
             resetAll();
+            navigate("/summary");
         } catch (e:any) {
             console.error(e);
             alert("บันทึกไม่สำเร็จ ❌ " + (e?.message ?? ""));
@@ -266,7 +271,7 @@ export default function Income() {
                 </button>
             </div>
 
-            {/* amount (typeable + centered) */}
+            {/* amount */}
             <div className="amount" style={{ display:"flex", alignItems:"baseline", justifyContent:"center", gap:6, width:"100%" }}>
                 <input
                     className="amount-input"
@@ -324,7 +329,7 @@ export default function Income() {
                         value={note}
                         onChange={(e)=>{ const v=e.target.value; setNote(v); saveDraft({ note: v }); }}
                         onBlur={()=> saveDraft({ note })}
-                        placeholder="โน้ต (ไม่บังคับ)"
+                        placeholder="โน้ต "
                     />
                 </div>
                 <div className="input"><MapPin size={18} strokeWidth={2} className="icon"/>

@@ -14,6 +14,10 @@ import Income from "./pages/income";
 import Expense from "./pages/expense";
 import Summary from "./pages/summary";
 
+//  เพิ่ม: Route ตัวเชื่อมไปหน้าเดิมสำหรับโหมดแก้ไข
+import ExpenseEdit from "./pages/expense.edit";
+import IncomeEdit from "./pages/income.edit";
+
 // Auth / Account
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
@@ -36,22 +40,22 @@ function NotFound() {
 // Component สำหรับป้องกันหน้าที่ต้อง login
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-  
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-  
+
   return <>{children}</>;
 }
 
 // Component สำหรับ redirect ถ้า login แล้ว
 function AuthRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-  
+
   if (isAuthenticated) {
     return <Navigate to="/home" replace />;
   }
-  
+
   return <>{children}</>;
 }
 
@@ -72,14 +76,14 @@ export default function App() {
   useEffect(() => {
     // เพิ่ม event listener
     window.addEventListener("auth-changed", checkAuth);
-    
+
     return () => {
       window.removeEventListener("auth-changed", checkAuth);
     };
   }, [checkAuth]);
 
   const currentPath = location.pathname;
-  
+
   // กำหนดหน้าที่ไม่ต้องแสดง nav (auth pages)
   const authPages = ['/login', '/signup'];
   const isAuthPage = authPages.includes(currentPath);
@@ -92,11 +96,11 @@ export default function App() {
   // Loading state
   if (isLoading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh' 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh'
       }}>
         <div>กำลังโหลด...</div>
       </div>
@@ -110,66 +114,85 @@ export default function App() {
 
       <Routes>
         {/* หน้าแรก - เป็น login เสมอ */}
-        <Route 
-          path="/" 
+        <Route
+          path="/"
           element={<Navigate to="/login" replace />}
         />
 
         {/* Auth Routes */}
-        <Route 
-          path="/login" 
+        <Route
+          path="/login"
           element={<Login />}
         />
-        <Route 
-          path="/signup" 
+        <Route
+          path="/signup"
           element={
             <AuthRoute>
               <SignUp />
             </AuthRoute>
-          } 
+          }
         />
 
         {/* Protected Routes - ต้อง login ก่อน */}
-        <Route 
-          path="/home" 
+        <Route
+          path="/home"
           element={
             <ProtectedRoute>
               <Home />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/day" 
+        <Route
+          path="/day"
           element={
             <ProtectedRoute>
               <Day />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/month" 
+        <Route
+          path="/month"
           element={
             <ProtectedRoute>
               <Month />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/income" 
+        <Route
+          path="/income"
           element={
             <ProtectedRoute>
               <Income />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/expense" 
+        <Route
+          path="/expense"
           element={
             <ProtectedRoute>
               <Expense />
             </ProtectedRoute>
-          } 
+          }
         />
+
+        {/*  เพิ่ม: เส้นทางโหมดแก้ไข (ใช้ component เดิมผ่านตัวเชื่อม .edit) */}
+        <Route
+          path="/expense-edit"
+          element={
+            <ProtectedRoute>
+              <ExpenseEdit />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/income-edit"
+          element={
+            <ProtectedRoute>
+              <IncomeEdit />
+            </ProtectedRoute>
+          }
+        />
+
         <Route 
           path="/summary" 
           element={

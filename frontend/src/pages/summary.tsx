@@ -9,6 +9,7 @@ import {
 import "./summary.css";
 import BottomNav from "./buttomnav";
 import "./buttomnav.css";
+import { useNavigate } from "react-router-dom";
 
 type ExpenseDTO = {
   id: number;
@@ -17,7 +18,8 @@ type ExpenseDTO = {
   amount: number;
   note?: string | null;
   place?: string | null;
-  date: string;
+  date: string;               // yyyy-MM-dd
+  occurredAt?: string | null; // ISO datetime (optional)
   paymentMethod?: string | null;
   iconKey?: string | null;
   userId?: number;
@@ -32,12 +34,13 @@ type Item = {
   title: string;
   tag: string;
   amount: number;
-  date?: string;
-  isoDate: string;
+  date?: string;        // dd/MM/yyyy (for display)
+  isoDate: string;      // yyyy-MM-dd
   note?: string;
   account?: string;
   location?: string;
   type: "EXPENSE" | "INCOME";
+  datetimeLocal?: string; // yyyy-MM-ddTHH:mm (local)
 };
 
 type DayEntry = {
@@ -160,6 +163,25 @@ function signedAmountText(n: number) {
   if (n < 0) return `-${Math.abs(n).toLocaleString()}`;
   return "0";
 }
+// yyyy-MM-ddTHH:mm -> {date:'dd/MM/yyyy', time:'HH:mm'}
+function splitLocalDatetime(local?: string): { date?: string; time?: string } {
+  if (!local || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(local)) return {};
+  const [d, t] = local.split("T");
+  const [y, m, dd] = d.split("-");
+  return { date: `${dd}/${m}/${y}`, time: t };
+}
+// ISO -> local yyyy-MM-ddTHH:mm
+function isoToLocalDatetime(iso?: string | null): string | undefined {
+  if (!iso) return undefined;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return undefined;
+  const yyyy = d.getFullYear();
+  const mm = pad2(d.getMonth() + 1);
+  const dd = pad2(d.getDate());
+  const hh = pad2(d.getHours());
+  const mi = pad2(d.getMinutes());
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+}
 
 function toDayEntries(list: ExpenseDTO[]): DayEntry[] {
   const groups = new Map<string, Item[]>();
@@ -181,7 +203,8 @@ function toDayEntries(list: ExpenseDTO[]): DayEntry[] {
       note: e.note || undefined,
       account: e.paymentMethod || undefined,
       location: e.place || undefined,
-      type: e.type
+      type: e.type,
+      datetimeLocal: isoToLocalDatetime(e.occurredAt)
     };
     if (!groups.has(isoKey)) groups.set(isoKey, []);
     groups.get(isoKey)!.push(item);
@@ -202,9 +225,10 @@ type EditForm = {
   amount: number;
   note: string;
   place: string;
-  date: string;
+  date: string;           // yyyy-MM-dd
   paymentMethod: string;
   iconKey: string;
+  datetime?: string;      // yyyy-MM-ddTHH:mm (local)
 };
 
 function itemToForm(it: Item): EditForm {
@@ -217,6 +241,7 @@ function itemToForm(it: Item): EditForm {
     date: it.isoDate,
     paymentMethod: it.paymentMethod ?? "",
     iconKey: it.iconKey ?? "Utensils",
+    datetime: it.datetimeLocal
   };
 }
 
@@ -228,6 +253,7 @@ export default function Summary() {
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState<EditForm | null>(null);
   const [saving, setSaving] = useState(false);
+  const navigate = useNavigate();
 
   const loadExpenses = async () => {
     setLoading(true);
@@ -253,12 +279,24 @@ export default function Summary() {
     setForm(itemToForm(it));
     setEditMode(true);
     setSelected(it);
+
+    const f = itemToForm(it);
+    const route = f.typeLabel === "รายได้" ? "/income-edit" : "/expense-edit";
+    navigate(route, {
+      state: {
+        mode: "edit",
+        data: { ...f, id: it.id }
+      },
+    });
   };
 
   const removeFromState = (id: number) => {
     setEntries((prev) =>
       prev
-        .map((d) => ({ ...d, items: d.items.filter((x) => x.id !== id), total: d.items.filter((x) => x.id !== id).reduce((s, it) => s + it.amount, 0) }))
+        .map((d) => {
+          const items = d.items.filter((x) => x.id !== id);
+          return { ...d, items, total: items.reduce((s, it) => s + it.amount, 0) };
+        })
         .filter((d) => d.items.length > 0)
     );
   };
@@ -413,6 +451,7 @@ export default function Summary() {
         ))}
       </div>
 
+      {/* overlay detail */}
       {selected && (
         <div className="detail-overlay" onClick={() => { setSelected(null); setEditMode(false); }}>
           <div className="detail-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
@@ -420,6 +459,7 @@ export default function Summary() {
               <X size={20} />
             </button>
 
+            {/* Header */}
             <div className="detail-header">
               <div className="detail-avatar">
                 <IconByKey name={selected.iconKey} category={selected.category} size={24} />
@@ -427,159 +467,50 @@ export default function Summary() {
               <h3 className="detail-title">{selected.category}</h3>
             </div>
 
+            {/* Body - แสดงรายละเอียดครบตามที่ขอ */}
             {!editMode && (
               <div className="detail-body">
-                <div className="edit-grid">
-                  <div className="pair">
-                    <div className="field">
-                      <label>ประเภท</label>
-                      <input readOnly value={selected.type === "INCOME" ? "รายได้" : "ค่าใช้จ่าย"} />
-                    </div>
-                    <div className="field">
-                      <label>หมวดหมู่</label>
-                      <input readOnly value={selected.category} />
-                    </div>
-                  </div>
-
-                  <div className="pair">
-                    <div className="field">
-                      <label>จำนวนเงิน</label>
-                      <input readOnly value={Math.abs(selected.amount)} />
-                    </div>
-                    <div className="field">
-                      <label>วันที่</label>
-                      <input readOnly value={selected.date || ""} />
-                    </div>
-                  </div>
-
-                  <div className="pair">
-                    <div className="field">
-                      <label>บัญชี</label>
-                      <input readOnly value={selected.account || ""} />
-                    </div>
-                    <div className="field">
-                      <label>วิธีจ่าย</label>
-                      <input readOnly value={selected.location || ""} />
-                    </div>
-                  </div>
-
-                  <div className="pair">
-                    <div className="field">
-                      <label>โน้ต</label>
-                      <input readOnly value={selected.note || ""} />
-                    </div>
-                    <div className="field">
-                      <label>Icon Key</label>
-                      <input readOnly value={selected.iconKey || ""} />
-                    </div>
-                  </div>
-
-                  <div className="actions-row two">
-                    <button className="btn primary" onClick={() => onEdit(selected)}>แก้ไข</button>
-                    <button className="btn danger" onClick={() => onDelete(selected)}>ลบ</button>
-                  </div>
+                <div className="kv">
+                  <span className="k">ประเภท</span>
+                  <span className="v">{selected.type === "INCOME" ? "รายได้" : "ค่าใช้จ่าย"}</span>
                 </div>
-              </div>
-            )}
+                <div className="kv">
+                  <span className="k">จำนวนเงิน</span>
+                  <span className={`v ${selected.amount < 0 ? "neg" : "pos"}`}>
+                    {Math.abs(selected.amount).toLocaleString()} ฿
+                  </span>
+                </div>
+                <div className="kv">
+                  <span className="k">วันที่</span>
+                  <span className="v">
+                    {(() => {
+                      const d = parseIsoDateToLocal(selected.isoDate);
+                      return ddmmyyyy(d);
+                    })()}
+                  </span>
+                </div>
+                <div className="kv">
+                  <span className="k">เวลา</span>
+                  <span className="v">
+                    {splitLocalDatetime(selected.datetimeLocal).time || "-"}
+                  </span>
+                </div>
+                <div className="kv">
+                  <span className="k">ประเภทการชำระ</span>
+                  <span className="v">{selected.paymentMethod || "-"}</span>
+                </div>
+                <div className="kv">
+                  <span className="k">โน้ต</span>
+                  <span className="v">{selected.note && selected.note.trim() !== "" ? selected.note : "-"}</span>
+                </div>
+                <div className="kv">
+                  <span className="k">สถานที่</span>
+                  <span className="v">{selected.location && selected.location.trim() !== "" ? selected.location : "-"}</span>
+                </div>
 
-            {editMode && form && (
-              <div className="detail-body">
-                <div className="edit-grid">
-                  <div className="pair">
-                    <div className="field">
-                      <label>ประเภท</label>
-                      <select
-                        value={form.typeLabel}
-                        onChange={(e) => setForm({ ...form, typeLabel: e.target.value as EditForm["typeLabel"] })}
-                      >
-                        <option value="ค่าใช้จ่าย">ค่าใช้จ่าย</option>
-                        <option value="รายได้">รายได้</option>
-                      </select>
-                    </div>
-                    <div className="field">
-                      <label>หมวดหมู่</label>
-                      <input
-                        type="text"
-                        value={form.category}
-                        onChange={(e) => setForm({ ...form, category: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="pair">
-                    <div className="field">
-                      <label>จำนวนเงิน</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={form.amount}
-                        onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })}
-                        required
-                      />
-                    </div>
-                    <div className="field date">
-                      <label>วันที่</label>
-                      <input
-                        type="date"
-                        value={form.date}
-                        onChange={(e) => setForm({ ...form, date: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="pair">
-                    <div className="field">
-                      <label>บัญชี</label>
-                      <input
-                        type="text"
-                        value={form.paymentMethod}
-                        onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
-                      />
-                    </div>
-                    <div className="field">
-                      <label>วิธีจ่าย</label>
-                      <input
-                        type="text"
-                        value={form.place}
-                        onChange={(e) => setForm({ ...form, place: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="pair">
-                    <div className="field">
-                      <label>โน้ต</label>
-                      <input
-                        type="text"
-                        value={form.note}
-                        onChange={(e) => setForm({ ...form, note: e.target.value })}
-                      />
-                    </div>
-                    <div className="field">
-                      <label>Icon Key</label>
-                      <input
-                        type="text"
-                        value={form.iconKey}
-                        onChange={(e) => setForm({ ...form, iconKey: e.target.value })}
-                        list="iconKeys"
-                      />
-                      <datalist id="iconKeys">
-                        {Object.keys(ICONS).map((k) => <option key={k} value={k} />)}
-                      </datalist>
-                    </div>
-                  </div>
-
-                  <div className="actions-row compact wide-save">
-                    <button className="btn primary stretch" onClick={submitEdit} disabled={saving}>
-                      {saving ? "กำลังบันทึก…" : "บันทึก"}
-                    </button>
-                    <button className="btn ghost small-cancel" onClick={() => setEditMode(false)} disabled={saving}>
-                      ยกเลิก
-                    </button>
-                  </div>
+                <div className="actions-row two" style={{ marginTop: 12 }}>
+                  <button className="btn primary" onClick={() => onEdit(selected)}>แก้ไข</button>
+                  <button className="btn danger" onClick={() => onDelete(selected)}>ลบ</button>
                 </div>
               </div>
             )}

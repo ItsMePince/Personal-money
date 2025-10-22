@@ -132,7 +132,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             <input
               type="text"
               className="input"
-              placeholder="user หรือ admin"
+              placeholder="username"
               autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -146,7 +146,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             <input
               type="password"
               className="input"
-              placeholder="password หรือ admin"
+              placeholder="password "
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
