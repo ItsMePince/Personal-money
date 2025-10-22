@@ -2,11 +2,9 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 
-// Header + Navbar
 import Header from "./components/Header";
 import BottomNav from "./pages/buttomnav";
 
-// หน้าหลัก
 import Home from "./pages/Home";
 import Day from "./pages/day";
 import Month from "./pages/month";
@@ -14,20 +12,17 @@ import Income from "./pages/income";
 import Expense from "./pages/expense";
 import Summary from "./pages/summary";
 
-// Auth / Account
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import AccountSelect from "./pages/AccountSelect";
 import AccountNew from "./pages/accountnew";
 
-// Custom categories
 import CustomIncome from "./pages/customincome";
 import CustomOutcome from "./pages/customoutcome";
 
-// ✅ เพิ่มหน้า More
 import More from "./pages/more";
+import Location from "./pages/Location";
 
-// (ตัวอย่าง) หน้าปลายทางของปุ่มใน More — ใส่จริงทีหลังได้
 function Placeholder({ title }: { title: string }) {
     return (
         <div style={{ padding: 24 }}>
@@ -46,14 +41,12 @@ function NotFound() {
     );
 }
 
-// Component สำหรับป้องกันหน้าที่ต้อง login
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
     const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
     if (!isAuthenticated) return <Navigate to="/login" replace />;
     return <>{children}</>;
 }
 
-// Component สำหรับ redirect ถ้า login แล้ว
 function AuthRoute({ children }: { children: React.ReactNode }) {
     const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
     if (isAuthenticated) return <Navigate to="/home" replace />;
@@ -91,14 +84,11 @@ export default function App() {
 
     return (
         <div className="App">
-            {/* แสดง Header เฉพาะเมื่อ NOT auth page */}
             {!isAuthPage && <Header />}
 
             <Routes>
-                {/* หน้าแรก - เป็น login เสมอ */}
                 <Route path="/" element={<Navigate to="/login" replace />} />
 
-                {/* Auth Routes */}
                 <Route path="/login" element={<Login />} />
                 <Route
                     path="/signup"
@@ -109,7 +99,6 @@ export default function App() {
                     }
                 />
 
-                {/* Protected Routes - ต้อง login ก่อน */}
                 <Route
                     path="/home"
                     element={
@@ -159,7 +148,6 @@ export default function App() {
                     }
                 />
 
-                {/* Account Routes */}
                 <Route
                     path="/accountselect"
                     element={
@@ -177,7 +165,6 @@ export default function App() {
                     }
                 />
 
-                {/* Custom category Routes */}
                 <Route
                     path="/customincome"
                     element={
@@ -195,7 +182,6 @@ export default function App() {
                     }
                 />
 
-                {/* ✅ เส้นทางหน้า More */}
                 <Route
                     path="/more"
                     element={
@@ -205,7 +191,16 @@ export default function App() {
                     }
                 />
 
-                {/* (ตัวอย่าง) ปลายทางเมนูในหน้า More */}
+                {/* <-- เพิ่มเส้นทางหน้าแผนที่ */}
+                <Route
+                    path="/location"
+                    element={
+                        <ProtectedRoute>
+                            <Location />
+                        </ProtectedRoute>
+                    }
+                />
+
                 <Route
                     path="/recurring"
                     element={
@@ -231,13 +226,10 @@ export default function App() {
                     }
                 />
 
-                {/* 404 */}
                 <Route path="*" element={<NotFound />} />
             </Routes>
 
-            {/* แสดง BottomNav เฉพาะเมื่อ NOT auth page */}
             {!isAuthPage && <BottomNav />}
         </div>
     );
 }
-// trigger CI test run

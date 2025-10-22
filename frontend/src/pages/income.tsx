@@ -22,7 +22,6 @@ import { usePaymentMethod } from "../PaymentMethodContext";
 const API_BASE =
     (import.meta.env.VITE_API_BASE as string) || "http://localhost:8081";
 
-/* inline icons */
 const ChevronDown = () => (
     <svg viewBox="0 0 24 24" className="icon">
         <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
@@ -47,7 +46,6 @@ const IconCheck = () => (
     </svg>
 );
 
-/** รายได้เท่านั้น */
 type Category = "ค่าขนม" | "ทำงาน" | "ลงทุน" | "อื่นๆ";
 
 const ICON_MAP: Record<string, React.FC<any>> = {
@@ -73,7 +71,6 @@ const getNowHHMM = () => {
 };
 const getNowLocalDT = () => `${getTodayISO()}T${getNowHHMM()}`;
 
-/** iconKey มาตรฐานสำหรับหมวดรายได้ */
 const defaultIconKeyByCategory: Record<Category, string> = {
     "ค่าขนม": "HandCoins",
     "ทำงาน": "Banknote",
@@ -81,7 +78,6 @@ const defaultIconKeyByCategory: Record<Category, string> = {
     "อื่นๆ": "more",
 };
 
-/* ---------- draft helpers (merge & hydrate-safe) ---------- */
 const DRAFT_KEY = "income_draft_v2";
 const safeParse = (raw: any) => { try { return JSON.parse(raw ?? ""); } catch { return {}; } };
 const readDraftNow = () => safeParse(sessionStorage.getItem(DRAFT_KEY));
@@ -89,14 +85,12 @@ const saveDraft = (patch: Record<string, any>) => {
     const cur = readDraftNow();
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ...cur, ...patch }));
 };
-/* --------------------------------------------------------- */
 
 export default function Income() {
     const navigate = useNavigate();
     const location = useLocation();
     const { payment, setPayment } = usePaymentMethod();
 
-    // ---- Hydrate draft before first render ----
     const initial = readDraftNow();
 
     const [category, setCategory] = useState<Category>(() => initial.category ?? "ค่าขนม");
@@ -104,17 +98,13 @@ export default function Income() {
     const [amount, setAmount] = useState<string>(() => initial.amount ?? "0");
     const [note, setNote] = useState<string>(() => initial.note ?? "");
     const [place, setPlace] = useState<string>(() => initial.place ?? "");
-    // ✅ ใช้ช่องเดียว วัน+เวลา
     const [dt, setDt] = useState<string>(() => initial.dt ?? getNowLocalDT());
     const [menuOpen, setMenuOpen] = useState(false);
 
-    // restore payment from draft (ถ้ามี)
     useEffect(() => {
         if (initial.payment && !payment) setPayment(initial.payment);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // รับค่าจากหน้า customincome
     useEffect(() => {
         const st = location.state as any;
         if (st?.customIncome) {
@@ -123,10 +113,8 @@ export default function Income() {
             saveDraft({ category: "อื่นๆ", customCat: { label: st.customIncome.label, icon: st.customIncome.icon } });
             navigate(location.pathname, { replace: true, state: null });
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.state]);
 
-    // ------ Write-through saves (ทุกการเปลี่ยน) ------
     const sanitizeAmount = (raw: string) => {
         let v = raw.replace(/[^\d.]/g, "");
         const parts = v.split(".");
@@ -151,7 +139,6 @@ export default function Income() {
         saveDraft({ amount: next });
     };
 
-    // ให้ปุ่มวันที่เวลาเปิด picker ได้ทุกเบราว์เซอร์
     const dtRef = useRef<HTMLInputElement>(null);
     const openDateTimePicker = (e?: React.MouseEvent | React.KeyboardEvent) => {
         e?.preventDefault();
@@ -168,7 +155,6 @@ export default function Income() {
     };
 
     const onConfirm = async () => {
-        // ✅ note ไม่บังคับ (เหมือนหน้า Expense)
         if (!amount || amount === "0" || !place.trim() || !dt) {
             alert("Required ❌"); return;
         }
@@ -186,10 +172,10 @@ export default function Income() {
             type: "รายได้",
             category: finalCategory,
             amount: parseFloat(amount || "0"),
-            note,                 // อนุญาตให้เป็น "" ได้
+            note,
             place,
-            date: dateOnly,       // คงค่า date เดิมให้ BE ที่ยังใช้ได้
-            occurredAt: occurredAtISO, // เพิ่มเขตเวลาแบบ ISO
+            date: dateOnly,
+            occurredAt: occurredAtISO,
             paymentMethod: payment?.name ?? null,
             iconKey,
         };
@@ -224,6 +210,20 @@ export default function Income() {
         return <Cmp className={`icon ${category === "อื่นๆ" ? "icon-active" : ""} lucide`} size={20} strokeWidth={2} />;
     };
 
+    useEffect(() => {
+        const onFocus = () => {
+            const name = sessionStorage.getItem("selectedPlaceName");
+            if (name && name !== place) {
+                setPlace(name);
+                saveDraft({ place: name });
+                sessionStorage.removeItem("selectedPlaceName");
+            }
+        };
+        window.addEventListener("focus", onFocus);
+        onFocus();
+        return () => window.removeEventListener("focus", onFocus);
+    }, [place]);
+
     return (
         <div className="calc-wrap">
             <header className="topbar"></header>
@@ -246,7 +246,6 @@ export default function Income() {
                 )}
             </div>
 
-            {/* categories */}
             <div className="category-row">
                 <button className={`cat ${category==="ค่าขนม"?"active":""}`} onClick={()=>{ setCategory("ค่าขนม"); setCustomCat(null); saveDraft({ category:"ค่าขนม", customCat:null }); }}>
                     <HandCoins className={`icon ${category==="ค่าขนม"?"icon-active":""} lucide`} size={20} strokeWidth={2} />
@@ -266,13 +265,12 @@ export default function Income() {
                 </button>
             </div>
 
-            {/* amount (typeable + centered) */}
             <div className="amount" style={{ display:"flex", alignItems:"baseline", justifyContent:"center", gap:6, width:"100%" }}>
                 <input
                     className="amount-input"
                     value={amount}
                     onChange={onAmountChange}
-                    onFocus={(e)=> e.currentTarget.select()}
+                    onFocus={(e)=> e.currentTarget.select() }
                     inputMode="decimal"
                     enterKeyHint="done"
                     aria-label="จำนวนเงิน"
@@ -283,7 +281,6 @@ export default function Income() {
                 <span className="currency" style={{ fontWeight:800, fontSize:"clamp(28px, 5vw, 40px)", lineHeight:1 }}>฿</span>
             </div>
 
-            {/* date-time + payment */}
             <div className="segments" style={{ position:"relative", display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
                 <button
                     type="button"
@@ -317,27 +314,21 @@ export default function Income() {
                 </button>
             </div>
 
-            {/* note / place */}
             <div className="inputs">
                 <div className="input"><ClipboardList size={18} strokeWidth={2} className="icon"/>
                     <input
                         value={note}
                         onChange={(e)=>{ const v=e.target.value; setNote(v); saveDraft({ note: v }); }}
                         onBlur={()=> saveDraft({ note })}
-                        placeholder="โน้ต (ไม่บังคับ)"
+                        placeholder="Optional"
                     />
                 </div>
-                <div className="input"><MapPin size={18} strokeWidth={2} className="icon"/>
-                    <input
-                        value={place}
-                        onChange={(e)=>{ const v=e.target.value; setPlace(v); saveDraft({ place: v }); }}
-                        onBlur={()=> saveDraft({ place })}
-                        placeholder="สถานที่"
-                    />
-                </div>
+                <button className="input" onClick={() => navigate("/location")} style={{ cursor: "pointer" }}>
+                    <MapPin size={18} strokeWidth={2} className="icon"/>
+                    <input value={place || "สถานที่"} readOnly />
+                </button>
             </div>
 
-            {/* keypad */}
             <div className="keypad">
                 {pad.map((k,i)=>(
                     <button key={i} className={`key ${k==="⌫"?"danger":""}`} onClick={()=> (k==="⌫"? onTapKey("⌫"): onTapKey(k))}>
