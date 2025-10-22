@@ -336,7 +336,7 @@ export default function Income() {
                         value={note}
                         onChange={(e) => { const v = e.target.value; setNote(v); saveDraft({ note: v }); }}
                         onBlur={() => saveDraft({ note })}
-                        placeholder="โน้ต (ไม่บังคับ)"
+                        placeholder="โน้ต"
                     />
                 </div>
 
