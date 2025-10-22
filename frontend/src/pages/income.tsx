@@ -114,7 +114,6 @@ export default function Income() {
 
     useEffect(() => {
         if (initial.payment && !payment) setPayment(initial.payment);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
@@ -125,7 +124,6 @@ export default function Income() {
             saveDraft({ category: "อื่นๆ", customCat: { label: st.customIncome.label, icon: st.customIncome.icon } });
             navigate(location.pathname, { replace: true, state: null });
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.state]);
 
     const sanitizeAmount = (raw: string) => {
@@ -229,6 +227,20 @@ export default function Income() {
         return <Cmp className={`icon ${category === "อื่นๆ" ? "icon-active" : ""} lucide`} size={20} strokeWidth={2} />;
     };
 
+    useEffect(() => {
+        const onFocus = () => {
+            const name = sessionStorage.getItem("selectedPlaceName");
+            if (name && name !== place) {
+                setPlace(name);
+                saveDraft({ place: name });
+                sessionStorage.removeItem("selectedPlaceName");
+            }
+        };
+        window.addEventListener("focus", onFocus);
+        onFocus();
+        return () => window.removeEventListener("focus", onFocus);
+    }, [place]);
+
     return (
         <div className="calc-wrap">
             <header className="topbar"></header>
@@ -251,7 +263,6 @@ export default function Income() {
                 )}
             </div>
 
-            {/* categories */}
             <div className="category-row">
                 <button className={`cat ${category==="ค่าขนม"?"active":""}`} onClick={()=>{ setCategory("ค่าขนม"); setCustomCat(null); saveDraft({ category:"ค่าขนม", customCat:null }); }}>
                     <HandCoins className={`icon ${category==="ค่าขนม"?"icon-active":""} lucide`} size={20} strokeWidth={2} />
@@ -277,7 +288,7 @@ export default function Income() {
                     className="amount-input"
                     value={amount}
                     onChange={onAmountChange}
-                    onFocus={(e)=> e.currentTarget.select()}
+                    onFocus={(e)=> e.currentTarget.select() }
                     inputMode="decimal"
                     enterKeyHint="done"
                     aria-label="จำนวนเงิน"
@@ -288,7 +299,6 @@ export default function Income() {
                 <span className="currency" style={{ fontWeight:800, fontSize:"clamp(28px, 5vw, 40px)", lineHeight:1 }}>฿</span>
             </div>
 
-            {/* date-time + payment */}
             <div className="segments" style={{ position:"relative", display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
                 <button
                     type="button"
@@ -322,7 +332,6 @@ export default function Income() {
                 </button>
             </div>
 
-            {/* note / place */}
             <div className="inputs">
                 <div className="input"><ClipboardList size={18} strokeWidth={2} className="icon"/>
                     <input
@@ -340,9 +349,12 @@ export default function Income() {
                         placeholder="สถานที่"
                     />
                 </div>
+                <button className="input" onClick={() => navigate("/location")} style={{ cursor: "pointer" }}>
+                    <MapPin size={18} strokeWidth={2} className="icon"/>
+                    <input value={place || "สถานที่"} readOnly />
+                </button>
             </div>
 
-            {/* keypad */}
             <div className="keypad">
                 {pad.map((k,i)=>(
                     <button key={i} className={`key ${k==="⌫"?"danger":""}`} onClick={()=> (k==="⌫"? onTapKey("⌫"): onTapKey(k))}>

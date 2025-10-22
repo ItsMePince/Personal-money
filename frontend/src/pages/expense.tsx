@@ -1,19 +1,19 @@
-// src/pages/Expense.tsx
+// src/pages/expense.tsx
 // @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./expense.css";
 import {
-  ClipboardList, MapPin, CalendarDays,
-  Utensils, Pizza, Drumstick, Coffee, Beer, CupSoda, IceCream, Candy, Cake,
-  Car, Bus, Bike, Plane, Train, Ship, Fuel, Map, MapPin as MapPinIcon,
-  Stethoscope, HeartPulse, Activity, Pill, Hospital, Ambulance,
-  ShoppingCart, ShoppingBag, Gift, Tag, Shirt, CreditCard, SoapDispenserDroplet,
-  Briefcase, Laptop, Calculator, BarChart, Coins, Wallet,
-  BookOpen, GraduationCap, Pencil,
-  Dumbbell, Goal, Trophy, Volleyball,
-  Dog, Cat, Fish, Bird,
-  Home, Sofa, Bed, Wrench, Hammer,
-  Gamepad, Music, Film, Popcorn, Clapperboard, Sprout,
+    ClipboardList, MapPin, CalendarDays,
+    Utensils, Pizza, Drumstick, Coffee, Beer, CupSoda, IceCream, Candy, Cake,
+    Car, Bus, Bike, Plane, Train, Ship, Fuel, Map, MapPin as MapPinIcon,
+    Stethoscope, HeartPulse, Activity, Pill, Hospital, Ambulance,
+    ShoppingCart, ShoppingBag, Gift, Tag, Shirt, CreditCard, SoapDispenserDroplet,
+    Briefcase, Laptop, Calculator, BarChart, Coins, Wallet,
+    BookOpen, GraduationCap, Pencil,
+    Dumbbell, Goal, Trophy, Volleyball,
+    Dog, Cat, Fish, Bird,
+    Home, Sofa, Bed, Wrench, Hammer,
+    Gamepad, Music, Film, Popcorn, Clapperboard, Sprout,
 } from "lucide-react";
 import BottomNav from "./buttomnav";
 import { useNavigate } from "react-router-dom";
@@ -27,67 +27,67 @@ const DRAFT_KEY = "expense_draft_v2";
 const safeParse = (raw: any) => { try { return JSON.parse(raw ?? ""); } catch { return {}; } };
 const readDraftNow = () => safeParse(sessionStorage.getItem(DRAFT_KEY));
 const saveDraft = (patch: Record<string, any>) => {
-  const cur = readDraftNow();
-  sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ...cur, ...patch }));
+    const cur = readDraftNow();
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ...cur, ...patch }));
 };
 
 type Category = "อาหาร" | "ค่าเดินทาง" | "ของขวัญ" | "อื่นๆ";
 
 const getTodayISO = () => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 };
 const getNowHHMM = () => {
-  const now = new Date();
-  return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 };
 const getNowLocalDT = () => `${getTodayISO()}T${getNowHHMM()}`;
 
 const customIconByKey: Record<string, React.FC<any>> = {
-  food: Utensils, pizza: Pizza, drumstick: Drumstick, coffee: Coffee, beer: Beer,
-  cupsoda: CupSoda, icecream: IceCream, candy: Candy, cake: Cake,
-  car: Car, bus: Bus, bike: Bike, plane: Plane, train: Train, ship: Ship,
-  fuel: Fuel, map: Map, mappin: MapPinIcon,
-  stethoscope: Stethoscope, heart: HeartPulse, activity: Activity,
-  pill: Pill, hospital: Hospital, ambulance: Ambulance,
-  cart: ShoppingCart, bag: ShoppingBag, gift: Gift, tag: Tag, shirt: Shirt, creditcard: CreditCard, soap: SoapDispenserDroplet,
-  briefcase: Briefcase, laptop: Laptop, calculator: Calculator, barchart: BarChart, coins: Coins, wallet: Wallet,
-  book: BookOpen, graduation: GraduationCap, pencil: Pencil,
-  dumbbell: Dumbbell, goal: Goal, trophy: Trophy, volleyball: Volleyball,
-  dog: Dog, cat: Cat, fish: Bird,
-  home: Home, sofa: Sofa, bed: Bed, wrench: Wrench, hammer: Hammer,
-  game: Gamepad, music: Music, film: Film, popcorn: Popcorn, clapper: Clapperboard, sprout: Sprout,
-  more: ({ active = false }: { active?: boolean }) => (
-    <svg viewBox="0 0 24 24" className={`icon ${active ? "icon-active" : ""}`}>
-      <circle cx="5" cy="12" r="1.8" />
-      <circle cx="12" cy="12" r="1.8" />
-      <circle cx="19" cy="12" r="1.8" />
-    </svg>
-  ),
+    food: Utensils, pizza: Pizza, drumstick: Drumstick, coffee: Coffee, beer: Beer,
+    cupsoda: CupSoda, icecream: IceCream, candy: Candy, cake: Cake,
+    car: Car, bus: Bus, bike: Bike, plane: Plane, train: Train, ship: Ship,
+    fuel: Fuel, map: Map, mappin: MapPinIcon,
+    stethoscope: Stethoscope, heart: HeartPulse, activity: Activity,
+    pill: Pill, hospital: Hospital, ambulance: Ambulance,
+    cart: ShoppingCart, bag: ShoppingBag, gift: Gift, tag: Tag, shirt: Shirt, creditcard: CreditCard, soap: SoapDispenserDroplet,
+    briefcase: Briefcase, laptop: Laptop, calculator: Calculator, barchart: BarChart, coins: Coins, wallet: Wallet,
+    book: BookOpen, graduation: GraduationCap, pencil: Pencil,
+    dumbbell: Dumbbell, goal: Goal, trophy: Trophy, volleyball: Volleyball,
+    dog: Dog, cat: Cat, fish: Bird,
+    home: Home, sofa: Sofa, bed: Bed, wrench: Wrench, hammer: Hammer,
+    game: Gamepad, music: Music, film: Film, popcorn: Popcorn, clapper: Clapperboard, sprout: Sprout,
+    more: ({ active = false }: { active?: boolean }) => (
+        <svg viewBox="0 0 24 24" className={`icon ${active ? "icon-active" : ""}`}>
+            <circle cx="5" cy="12" r="1.8" />
+            <circle cx="12" cy="12" r="1.8" />
+            <circle cx="19" cy="12" r="1.8" />
+        </svg>
+    ),
 };
 
 const defaultIconKeyByCategory: Record<Category, string> = {
-  "อาหาร": "food",
-  "ค่าเดินทาง": "car",
-  "ของขวัญ": "gift",
-  "อื่นๆ": "more",
+    "อาหาร": "food",
+    "ค่าเดินทาง": "car",
+    "ของขวัญ": "gift",
+    "อื่นๆ": "more",
 };
 
 const ChevronDown = () => (
-  <svg viewBox="0 0 24 24" className="icon">
-    <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
+    <svg viewBox="0 0 24 24" className="icon">
+        <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
 );
 const IconBackspace = () => (
-  <svg viewBox="0 0 24 24" className="icon">
-    <path d="M4 12 9 6h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9L4 12Zm6-3 6 6m0-6-6 6"
-      stroke="currentColor" strokeWidth="1.7" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
+    <svg viewBox="0 0 24 24" className="icon">
+        <path d="M4 12 9 6h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9L4 12Zm6-3 6 6m0-6-6 6"
+              stroke="currentColor" strokeWidth="1.7" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
 );
 const IconCheck = () => (
-  <svg viewBox="0 0 24 24" className="icon">
-    <path d="m5 12 4 4 10-10" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
+    <svg viewBox="0 0 24 24" className="icon">
+        <path d="m5 12 4 4 10-10" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
 );
 
 export default function Expense() {
@@ -352,19 +352,5 @@ export default function Expense() {
             placeholder="สถานที่"
           />
         </div>
-      </div>
-
-      {/* keypad */}
-      <div className="keypad">
-        {pad.map((k, i) => (
-          <button key={i} className={`key ${k === "⌫" ? "danger" : ""}`} onClick={() => onTapKey(k)}>
-            {k === "⌫" ? <IconBackspace /> : k}
-          </button>
-        ))}
-      </div>
-
-      <div className="confirm"><button className="ok-btn" onClick={onConfirm}><IconCheck /></button></div>
-      <BottomNav />
-    </div>
-  );
+    );
 }

@@ -2,11 +2,9 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 
-// Header + Navbar
 import Header from "./components/Header";
 import BottomNav from "./pages/buttomnav";
 
-// หน้าหลัก
 import Home from "./pages/Home";
 import Day from "./pages/day";
 import Month from "./pages/month";
@@ -24,7 +22,6 @@ import SignUp from "./pages/SignUp";
 import AccountSelect from "./pages/AccountSelect";
 import AccountNew from "./pages/accountnew";
 
-// Custom categories
 import CustomIncome from "./pages/customincome";
 import CustomOutcome from "./pages/customoutcome";
 
@@ -37,7 +34,6 @@ function NotFound() {
   );
 }
 
-// Component สำหรับป้องกันหน้าที่ต้อง login
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
 
@@ -48,7 +44,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Component สำหรับ redirect ถ้า login แล้ว
 function AuthRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
 
@@ -248,4 +243,3 @@ export default function App() {
     </div>
   );
 }
-// trigger CI test run
