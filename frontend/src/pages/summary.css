@@ -235,3 +235,139 @@ html, body { height: 100% }
 .btn.ghost { background: transparent; border: 1px solid var(--border); }
 .btn.stretch { width: 100%; }
 .btn.small-cancel { padding: 0 12px; min-width: 86px; }
+
+/* ===== Add-on Pretty Skin (paste AFTER your existing CSS) ===== */
+
+/* กล่องรายละเอียด */
+.summary-page .detail-card {
+  border: 1px solid rgba(2, 6, 23, .08) !important;
+  box-shadow:
+    0 20px 40px rgba(2, 6, 23, .12),
+    0 2px 6px rgba(2, 6, 23, .06) !important;
+  border-radius: 20px !important;
+  padding: 18px 18px 16px !important;
+  background: var(--bg-elev) !important;
+}
+
+/* ปุ่มปิด */
+.summary-page .detail-close {
+  background: #fff !important;
+  border: 1px solid rgba(2, 6, 23, .06) !important;
+  border-radius: 10px !important;
+  width: 30px !important; height: 30px !important;
+  box-shadow: 0 2px 6px rgba(2,6,23,.06);
+  transition: transform .1s ease, background .2s ease;
+}
+.summary-page .detail-close:hover {
+  transform: scale(1.05);
+  background: #f8fafc !important;
+}
+
+/* ส่วนหัวของการ์ด */
+.summary-page .detail-header {
+  display: grid !important;
+  grid-template-columns: 44px 1fr !important;
+  gap: 12px !important;
+  align-items: center !important;
+  margin: 4px 0 6px !important;
+  padding-right: 42px !important;
+}
+.summary-page .detail-avatar {
+  width: 44px !important; height: 44px !important;
+  border-radius: 14px !important;
+  display: grid; place-items: center;
+  color: #0f766e !important;
+  background: radial-gradient(120% 120% at 0% 0%, #ecfeff, #ecfdf5 70%) !important;
+  border: 1px solid rgba(15,118,110,.15) !important;
+}
+.summary-page .detail-title {
+  margin: 0 !important;
+  font-weight: 800 !important;
+  letter-spacing: .2px !important;
+  font-size: 18px !important;
+  color: var(--text) !important;
+}
+
+/* แถวคีย์/ค่าในเนื้อหา */
+.summary-page .detail-body { margin-top: 6px !important; }
+.summary-page .detail-body .kv{
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 2px;
+  border-bottom: 1px dashed rgba(2, 6, 23, .06);
+}
+.summary-page .detail-body .kv:last-child{ border-bottom: 0; }
+.summary-page .detail-body .kv .k{
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 13px;
+}
+.summary-page .detail-body .kv .v{
+  color: var(--text);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* จำนวนเงินให้เป็นชิพ */
+.summary-page .detail-body .v.pos,
+.summary-page .detail-body .v.neg{
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  line-height: 1;
+  letter-spacing: .2px;
+  border: 1px solid transparent;
+}
+.summary-page .detail-body .v.pos{
+  color: #065f46;
+  background: #ecfdf5;
+  border-color: rgba(16,185,129,.25);
+}
+.summary-page .detail-body .v.neg{
+  color: #7f1d1d;
+  background: #fef2f2;
+  border-color: rgba(239,68,68,.25);
+}
+
+/* ถ้าไม่มีค่า แสดง – สีเทาอ่อน */
+.summary-page .detail-body .v:empty::after{
+  content: "-";
+  color: #9ca3af;
+}
+
+/* ปุ่มสวยๆ */
+.summary-page .btn {
+  border-radius: 12px !important;
+  padding: 10px 12px !important;
+  font-weight: 800 !important;
+  border: 1px solid transparent !important;
+  transition: transform .06s ease, box-shadow .15s ease, background .2s ease;
+}
+
+
+.summary-page .btn.primary {
+  background: #6CBEB0 !important; /* teal เข้มขึ้นอีกระดับ */
+  color: #ffffff !important;
+  transition: all 0.2s ease;
+}
+
+.summary-page .btn.primary:hover {
+  background: #55A99B !important; /* เข้มขึ้นนิดตอน hover */
+  transform: translateY(-1px);
+}
+
+.summary-page .btn.danger {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+}
+.summary-page .btn.danger:hover {
+  background: #dc2626 !important;
+  transform: translateY(-1px);
+}
+
+/* แถวรายการ: ทำให้ตัวเลข/หัวเรื่องหนาขึ้นเล็กน้อย */
+.summary-page .row-title{ font-weight: 800 !important; }
+.summary-page .day-total b{ font-weight: 900 !important; }
+

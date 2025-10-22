@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { usePaymentMethod } from "../PaymentMethodContext";
+import { useEditPrefill } from "../hooks/useEditPrefill";
 
 const API_BASE =
     (import.meta.env.VITE_API_BASE as string) || "http://localhost:8081";
@@ -101,6 +102,16 @@ export default function Income() {
     const [dt, setDt] = useState<string>(() => initial.dt ?? getNowLocalDT());
     const [menuOpen, setMenuOpen] = useState(false);
 
+    //  Prefill จาก Summary — ใช้ d.datetime ก่อน ถ้าไม่มีค่อย fallback
+    useEditPrefill((d) => {
+        setCategory((d.category as Category) ?? "ค่าขนม");
+        setCustomCat(null);
+        setAmount(String(d.amount ?? "0"));
+        setNote(d.note ?? "");
+        setPlace(d.place ?? "");
+        setDt(d.datetime || `${d.date}T${getNowHHMM()}`);
+    }, "edit_id_income");
+
     useEffect(() => {
         if (initial.payment && !payment) setPayment(initial.payment);
     }, []);
@@ -152,6 +163,7 @@ export default function Income() {
         setCategory("ค่าขนม"); setCustomCat(null); setPayment(null);
         setAmount("0"); setNote(""); setPlace(""); setDt(getNowLocalDT()); setMenuOpen(false);
         sessionStorage.removeItem(DRAFT_KEY);
+        sessionStorage.removeItem("edit_id_income");
     };
 
     const onConfirm = async () => {
@@ -159,7 +171,6 @@ export default function Income() {
             alert("Required ❌"); return;
         }
         const finalCategory = category === "อื่นๆ" && customCat?.label ? customCat.label : category;
-
         const iconKey =
             category === "อื่นๆ"
                 ? (customCat?.icon || "more")
@@ -180,16 +191,22 @@ export default function Income() {
             iconKey,
         };
 
+        const editId = sessionStorage.getItem("edit_id_income");
+        const isEdit = !!editId;
+        const url = isEdit ? `${API_BASE}/api/expenses/${editId}` : `${API_BASE}/api/expenses`;
+        const method = isEdit ? "PUT" : "POST";
+
         try {
-            const res = await fetch(`${API_BASE}/api/expenses`, {
-                method: "POST",
+            const res = await fetch(url, {
+                method,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
                 credentials: "include",
             });
             if (!res.ok) throw new Error(await res.text());
-            alert("บันทึกเรียบร้อย ✅");
+            alert(isEdit ? "แก้ไขเรียบร้อย " : "บันทึกเรียบร้อย ");
             resetAll();
+            navigate("/summary");
         } catch (e:any) {
             console.error(e);
             alert("บันทึกไม่สำเร็จ ❌ " + (e?.message ?? ""));
@@ -265,6 +282,7 @@ export default function Income() {
                 </button>
             </div>
 
+            {/* amount */}
             <div className="amount" style={{ display:"flex", alignItems:"baseline", justifyContent:"center", gap:6, width:"100%" }}>
                 <input
                     className="amount-input"
@@ -320,7 +338,15 @@ export default function Income() {
                         value={note}
                         onChange={(e)=>{ const v=e.target.value; setNote(v); saveDraft({ note: v }); }}
                         onBlur={()=> saveDraft({ note })}
-                        placeholder="Optional"
+                        placeholder="โน้ต "
+                    />
+                </div>
+                <div className="input"><MapPin size={18} strokeWidth={2} className="icon"/>
+                    <input
+                        value={place}
+                        onChange={(e)=>{ const v=e.target.value; setPlace(v); saveDraft({ place: v }); }}
+                        onBlur={()=> saveDraft({ place })}
+                        placeholder="สถานที่"
                     />
                 </div>
                 <button className="input" onClick={() => navigate("/location")} style={{ cursor: "pointer" }}>
