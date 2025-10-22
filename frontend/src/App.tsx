@@ -193,8 +193,9 @@ export default function App() {
           }
         />
 
-        <Route
-          path="/summary"
+        <Route 
+          path="/summary" 
+
           element={
             <ProtectedRoute>
               <Summary />

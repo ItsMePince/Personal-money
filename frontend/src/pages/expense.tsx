@@ -19,10 +19,10 @@ import BottomNav from "./buttomnav";
 import { useNavigate } from "react-router-dom";
 import { useTempCategory } from "../TempCategoryContext";
 import { usePaymentMethod } from "../PaymentMethodContext";
+import { useEditPrefill } from "../hooks/useEditPrefill";
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string) || "http://localhost:8081";
 
-// --- draft helpers (merge) ---
 const DRAFT_KEY = "expense_draft_v2";
 const safeParse = (raw: any) => { try { return JSON.parse(raw ?? ""); } catch { return {}; } };
 const readDraftNow = () => safeParse(sessionStorage.getItem(DRAFT_KEY));
@@ -43,7 +43,6 @@ const getNowHHMM = () => {
 };
 const getNowLocalDT = () => `${getTodayISO()}T${getNowHHMM()}`;
 
-/* map iconKey -> component */
 const customIconByKey: Record<string, React.FC<any>> = {
   food: Utensils, pizza: Pizza, drumstick: Drumstick, coffee: Coffee, beer: Beer,
   cupsoda: CupSoda, icecream: IceCream, candy: Candy, cake: Cake,
@@ -96,10 +95,8 @@ export default function Expense() {
   const { tempCategory, clearTempCategory } = useTempCategory();
   const { payment, clearPayment } = usePaymentMethod();
 
-  // hydrate draft before render
   const draft = readDraftNow();
 
-  // ====== state ======
   const [category, setCategory] = useState<Category>(() =>
     draft.category ?? (tempCategory ? "อื่นๆ" : "อาหาร")
   );
@@ -110,6 +107,15 @@ export default function Expense() {
 
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => { setHydrated(true); }, []);
+
+  //  Prefill เมื่อมาจาก Summary (โหมดแก้ไข) — ถ้ามี datetime จะใช้เลย
+  useEditPrefill((d) => {
+    setCategory((d.category as Category) ?? "อื่นๆ");
+    setAmount(String(d.amount ?? "0"));
+    setNote(d.note ?? "");
+    setPlace(d.place ?? "");
+    setDt(d.datetime || `${d.date}T${getNowHHMM()}`); // ใช้เวลาจริงถ้ามี
+  }, "edit_id_expense");
 
   // type switcher
   const [typeOpen, setTypeOpen] = useState(false);
@@ -127,13 +133,11 @@ export default function Expense() {
     }
   }, [tempCategory]);
 
-  // auto-save after hydrate
   useEffect(() => {
     if (!hydrated) return;
     saveDraft({ category, amount, note, place, dt });
   }, [category, amount, note, place, dt, hydrated]);
 
-  // ==== DateTime picker ====
   const dtRef = useRef<HTMLInputElement>(null);
   const openDateTimePicker = (e?: React.MouseEvent | React.KeyboardEvent) => {
     e?.preventDefault();
@@ -143,7 +147,6 @@ export default function Expense() {
     else { el.click(); el.focus(); }
   };
 
-  // keypad + write-through
   const pad = useMemo(() => ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "⌫"], []);
   const onTapKey = (k: string) => {
     let next = amount;
@@ -154,18 +157,11 @@ export default function Expense() {
     saveDraft({ amount: next });
   };
 
-  // NEW: handlers for keyboard typing in amount input
   const sanitizeAmount = (raw: string) => {
-    // keep digits and at most one dot; remove leading zeros properly
     let v = raw.replace(/[^\d.]/g, "");
     const parts = v.split(".");
-    if (parts.length > 2) {
-      v = parts[0] + "." + parts.slice(1).join(""); // collapse multiple dots
-    }
-    // avoid leading zeros like "0003"
-    if (v.startsWith("0") && !v.startsWith("0.")) {
-      v = String(parseInt(v || "0", 10));
-    }
+    if (parts.length > 2) v = parts[0] + "." + parts.slice(1).join("");
+    if (v.startsWith("0") && !v.startsWith("0.")) v = String(parseInt(v || "0", 10));
     if (v === "" || v === ".") v = "0";
     return v;
   };
@@ -180,52 +176,57 @@ export default function Expense() {
     setDt(getNowLocalDT());
     clearTempCategory(); if (typeof clearPayment === "function") clearPayment();
     sessionStorage.removeItem(DRAFT_KEY);
+    sessionStorage.removeItem("edit_id_expense");
   };
 
   const onConfirm = async () => {
-  // ✅ note ไม่จำเป็นแล้ว
-  if (!amount || amount === "0" || !place.trim() || !dt) {
-    alert("Required ❌");
-    return;
-  }
+    if (!amount || amount === "0" || !place.trim() || !dt) {
+      alert("Required ❌");
+      return;
+    }
 
-  const finalCategory =
-    category === "อื่นๆ" && tempCategory?.name ? tempCategory.name : category;
+    const finalCategory =
+      category === "อื่นๆ" && tempCategory?.name ? tempCategory.name : category;
 
-  const iconKey =
-    category === "อื่นๆ" ? (tempCategory?.iconKey || "more") : defaultIconKeyByCategory[category];
+    const iconKey =
+      category === "อื่นๆ" ? (tempCategory?.iconKey || "more") : defaultIconKeyByCategory[category];
 
-  const dateOnly = dt.slice(0, 10);
-  const occurredAtISO = new Date(`${dt}:00`).toISOString();
+    const dateOnly = dt.slice(0, 10);
+    const occurredAtISO = new Date(`${dt}:00`).toISOString();
 
-  const payload = {
-    type: "ค่าใช้จ่าย",
-    category: finalCategory,
-    amount: parseFloat(amount || "0"),
-    note,              // จะเป็น "" ก็ได้
-    place,
-    date: dateOnly,
-    occurredAt: occurredAtISO,
-    paymentMethod: payment?.name ?? null,
-    iconKey,
+    const payload = {
+      type: "ค่าใช้จ่าย",
+      category: finalCategory,
+      amount: parseFloat(amount || "0"),
+      note,
+      place,
+      date: dateOnly,
+      occurredAt: occurredAtISO,
+      paymentMethod: payment?.name ?? null,
+      iconKey,
+    };
+
+    const editId = sessionStorage.getItem("edit_id_expense");
+    const isEdit = !!editId;
+    const url = isEdit ? `${API_BASE}/api/expenses/${editId}` : `${API_BASE}/api/expenses`;
+    const method = isEdit ? "PUT" : "POST";
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(await res.text());
+      alert(isEdit ? "แก้ไขเรียบร้อย " : "บันทึกเรียบร้อย ");
+      resetForm();
+      navigate("/summary");
+    } catch (err: any) {
+      console.error(err);
+      alert("บันทึกไม่สำเร็จ ❌ " + (err?.message ?? ""));
+    }
   };
-
-  try {
-    const res = await fetch(`${API_BASE}/api/expenses`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      credentials: "include",
-    });
-    if (!res.ok) throw new Error(await res.text());
-    alert("บันทึกเรียบร้อย ✅");
-    resetForm();
-  } catch (err: any) {
-    console.error(err);
-    alert("บันทึกไม่สำเร็จ ❌ " + (err?.message ?? ""));
-  }
-};
-
 
   const formatDateTimeThai = (localDT: string) => {
     if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(localDT)) return "วัน / เดือน / ปี เวลา";
@@ -284,7 +285,7 @@ export default function Expense() {
         </button>
       </div>
 
-      {/* amount (NOW TYPEABLE) */}
+      {/* amount */}
       <div className="amount">
         <input
           className="amount-input"
@@ -299,8 +300,6 @@ export default function Expense() {
         />
         <span className="currency">฿</span>
       </div>
-
-
 
       {/* segments: datetime + payment */}
       <div className="segments" style={{ position: "relative", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
