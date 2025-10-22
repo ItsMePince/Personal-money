@@ -11,6 +11,7 @@ import Month from "./pages/month";
 import Income from "./pages/income";
 import Expense from "./pages/expense";
 import Summary from "./pages/summary";
+import Location from "./pages/Location";
 
 //  เพิ่ม: Route ตัวเชื่อมไปหน้าเดิมสำหรับโหมดแก้ไข
 import ExpenseEdit from "./pages/expense.edit";
@@ -197,6 +198,16 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
+          <Route
+              path="/location"
+
+              element={
+                  <ProtectedRoute>
+                      <Location />
+                  </ProtectedRoute>
+              }
+          />
 
         {/* Account Routes - ต้อง login ก่อน */}
         <Route

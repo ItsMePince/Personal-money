@@ -91,266 +91,297 @@ const IconCheck = () => (
 );
 
 export default function Expense() {
-  const navigate = useNavigate();
-  const { tempCategory, clearTempCategory } = useTempCategory();
-  const { payment, clearPayment } = usePaymentMethod();
+    const navigate = useNavigate();
+    const { tempCategory, clearTempCategory } = useTempCategory();
+    const { payment, clearPayment } = usePaymentMethod();
 
-  const draft = readDraftNow();
+    const draft = readDraftNow();
 
-  const [category, setCategory] = useState<Category>(() =>
-    draft.category ?? (tempCategory ? "อื่นๆ" : "อาหาร")
-  );
-  const [amount, setAmount] = useState<string>(() => draft.amount ?? "0");
-  const [note, setNote] = useState<string>(() => draft.note ?? "");
-  const [place, setPlace] = useState<string>(() => draft.place ?? "");
-  const [dt, setDt] = useState<string>(() => draft.dt ?? getNowLocalDT());
+    const [category, setCategory] = useState<Category>(() =>
+        draft.category ?? (tempCategory ? "อื่นๆ" : "อาหาร")
+    );
+    const [amount, setAmount] = useState<string>(() => draft.amount ?? "0");
+    const [note, setNote] = useState<string>(() => draft.note ?? "");
+    const [place, setPlace] = useState<string>(() => draft.place ?? "");
+    const [dt, setDt] = useState<string>(() => draft.dt ?? getNowLocalDT());
 
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => { setHydrated(true); }, []);
+    const [hydrated, setHydrated] = useState(false);
+    useEffect(() => { setHydrated(true); }, []);
 
-  //  Prefill เมื่อมาจาก Summary (โหมดแก้ไข) — ถ้ามี datetime จะใช้เลย
-  useEditPrefill((d) => {
-    setCategory((d.category as Category) ?? "อื่นๆ");
-    setAmount(String(d.amount ?? "0"));
-    setNote(d.note ?? "");
-    setPlace(d.place ?? "");
-    setDt(d.datetime || `${d.date}T${getNowHHMM()}`); // ใช้เวลาจริงถ้ามี
-  }, "edit_id_expense");
+    // Prefill (edit mode from Summary)
+    useEditPrefill((d) => {
+        setCategory((d.category as Category) ?? "อื่นๆ");
+        setAmount(String(d.amount ?? "0"));
+        setNote(d.note ?? "");
+        setPlace(d.place ?? "");
+        setDt(d.datetime || `${d.date}T${getNowHHMM()}`);
+    }, "edit_id_expense");
 
-  // type switcher
-  const [typeOpen, setTypeOpen] = useState(false);
-  const [entryType] = useState<"ค่าใช้จ่าย" | "รายได้">("ค่าใช้จ่าย");
-  const menuOptions: Array<"ค่าใช้จ่าย" | "รายได้"> = entryType === "ค่าใช้จ่าย" ? ["รายได้"] : ["ค่าใช้จ่าย"];
-  const onSelectType = (target: "ค่าใช้จ่าย" | "รายได้") => {
-    setTypeOpen(false);
-    navigate(target === "รายได้" ? "/income" : "/expense");
-  };
+    // bring back selected place from /location
+    useEffect(() => {
+        const apply = () => {
+            const name = sessionStorage.getItem("selectedPlaceName");
+            if (name) {
+                setPlace(name);
+                saveDraft({ place: name });
+                sessionStorage.removeItem("selectedPlaceName");
+            }
+        };
+        apply();                           // run on mount
+        window.addEventListener("focus", apply); // run when tab refocus (after navigating back)
+        return () => window.removeEventListener("focus", apply);
+    }, []);
 
-  useEffect(() => {
-    if (tempCategory && category !== "อื่นๆ") {
-      setCategory("อื่นๆ");
-      if (hydrated) saveDraft({ category: "อื่นๆ" });
-    }
-  }, [tempCategory]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    saveDraft({ category, amount, note, place, dt });
-  }, [category, amount, note, place, dt, hydrated]);
-
-  const dtRef = useRef<HTMLInputElement>(null);
-  const openDateTimePicker = (e?: React.MouseEvent | React.KeyboardEvent) => {
-    e?.preventDefault();
-    const el = dtRef.current;
-    if (!el) return;
-    if (typeof (el as any).showPicker === "function") (el as any).showPicker();
-    else { el.click(); el.focus(); }
-  };
-
-  const pad = useMemo(() => ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "⌫"], []);
-  const onTapKey = (k: string) => {
-    let next = amount;
-    if (k === "⌫") next = next.length <= 1 ? "0" : next.slice(0, -1);
-    else if (k === ".") next = next.includes(".") ? next : next + ".";
-    else next = next === "0" ? k : next + k;
-    setAmount(next);
-    saveDraft({ amount: next });
-  };
-
-  const sanitizeAmount = (raw: string) => {
-    let v = raw.replace(/[^\d.]/g, "");
-    const parts = v.split(".");
-    if (parts.length > 2) v = parts[0] + "." + parts.slice(1).join("");
-    if (v.startsWith("0") && !v.startsWith("0.")) v = String(parseInt(v || "0", 10));
-    if (v === "" || v === ".") v = "0";
-    return v;
-  };
-  const onAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = sanitizeAmount(e.target.value);
-    setAmount(v);
-    saveDraft({ amount: v });
-  };
-
-  const resetForm = () => {
-    setCategory("อาหาร"); setAmount("0"); setNote(""); setPlace("");
-    setDt(getNowLocalDT());
-    clearTempCategory(); if (typeof clearPayment === "function") clearPayment();
-    sessionStorage.removeItem(DRAFT_KEY);
-    sessionStorage.removeItem("edit_id_expense");
-  };
-
-  const onConfirm = async () => {
-    if (!amount || amount === "0" || !place.trim() || !dt) {
-      alert("Required ❌");
-      return;
-    }
-
-    const finalCategory =
-      category === "อื่นๆ" && tempCategory?.name ? tempCategory.name : category;
-
-    const iconKey =
-      category === "อื่นๆ" ? (tempCategory?.iconKey || "more") : defaultIconKeyByCategory[category];
-
-    const dateOnly = dt.slice(0, 10);
-    const occurredAtISO = new Date(`${dt}:00`).toISOString();
-
-    const payload = {
-      type: "ค่าใช้จ่าย",
-      category: finalCategory,
-      amount: parseFloat(amount || "0"),
-      note,
-      place,
-      date: dateOnly,
-      occurredAt: occurredAtISO,
-      paymentMethod: payment?.name ?? null,
-      iconKey,
+    // type switcher
+    const [typeOpen, setTypeOpen] = useState(false);
+    const [entryType] = useState<"ค่าใช้จ่าย" | "รายได้">("ค่าใช้จ่าย");
+    const menuOptions: Array<"ค่าใช้จ่าย" | "รายได้"> = entryType === "ค่าใช้จ่าย" ? ["รายได้"] : ["ค่าใช้จ่าย"];
+    const onSelectType = (target: "ค่าใช้จ่าย" | "รายได้") => {
+        setTypeOpen(false);
+        navigate(target === "รายได้" ? "/income" : "/expense");
     };
 
-    const editId = sessionStorage.getItem("edit_id_expense");
-    const isEdit = !!editId;
-    const url = isEdit ? `${API_BASE}/api/expenses/${editId}` : `${API_BASE}/api/expenses`;
-    const method = isEdit ? "PUT" : "POST";
+    useEffect(() => {
+        if (tempCategory && category !== "อื่นๆ") {
+            setCategory("อื่นๆ");
+            if (hydrated) saveDraft({ category: "อื่นๆ" });
+        }
+    }, [tempCategory]);
 
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error(await res.text());
-      alert(isEdit ? "แก้ไขเรียบร้อย " : "บันทึกเรียบร้อย ");
-      resetForm();
-      navigate("/summary");
-    } catch (err: any) {
-      console.error(err);
-      alert("บันทึกไม่สำเร็จ ❌ " + (err?.message ?? ""));
-    }
-  };
+    useEffect(() => {
+        if (!hydrated) return;
+        saveDraft({ category, amount, note, place, dt });
+    }, [category, amount, note, place, dt, hydrated]);
 
-  const formatDateTimeThai = (localDT: string) => {
-    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(localDT)) return "วัน / เดือน / ปี เวลา";
-    const [d, t] = localDT.split("T");
-    const [y, m, dd] = d.split("-");
-    return `${dd}/${m}/${y} ${t} น.`;
-  };
+    const dtRef = useRef<HTMLInputElement>(null);
+    const openDateTimePicker = (e?: React.MouseEvent | React.KeyboardEvent) => {
+        e?.preventDefault();
+        const el = dtRef.current;
+        if (!el) return;
+        if (typeof (el as any).showPicker === "function") (el as any).showPicker();
+        else { el.click(); el.focus(); }
+    };
 
-  const otherLabel = tempCategory?.name || "อื่นๆ";
-  const OtherIcon =
-    (tempCategory?.iconKey && customIconByKey[tempCategory.iconKey]) || customIconByKey["more"];
+    const pad = useMemo(() => ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "⌫"], []);
+    const onTapKey = (k: string) => {
+        let next = amount;
+        if (k === "⌫") next = next.length <= 1 ? "0" : next.slice(0, -1);
+        else if (k === ".") next = next.includes(".") ? next : next + ".";
+        else next = next === "0" ? k : next + k;
+        setAmount(next);
+        saveDraft({ amount: next });
+    };
 
-  return (
-    <div className="calc-wrap">
-      {/* type switch */}
-      <div className="type-pill" style={{ position: "relative" }}>
-        <button className="pill" onClick={() => setTypeOpen(o => !o)}>
-          <span>{entryType}</span><ChevronDown />
-        </button>
-        {typeOpen && (
-          <div onMouseLeave={() => setTypeOpen(false)}
-            style={{
-              position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#fff",
-              border: "1px solid rgba(0,0,0,.06)", borderRadius: 14, boxShadow: "0 10px 20px rgba(0,0,0,.08)", padding: 6, minWidth: 200, zIndex: 20
-            }}>
-            {menuOptions.map(op => (
-              <button key={op} onClick={() => onSelectType(op)}
-                style={{ width: "100%", textAlign: "center", padding: "10px 12px", border: 0, background: "transparent", borderRadius: 10, cursor: "pointer", fontWeight: 600, color: "var(--ink)" as any }}
-                onMouseEnter={e => e.currentTarget.style.background = "#f3fbf8"}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                {op}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+    const sanitizeAmount = (raw: string) => {
+        let v = raw.replace(/[^\d.]/g, "");
+        const parts = v.split(".");
+        if (parts.length > 2) v = parts[0] + "." + parts.slice(1).join("");
+        if (v.startsWith("0") && !v.startsWith("0.")) v = String(parseInt(v || "0", 10));
+        if (v === "" || v === ".") v = "0";
+        return v;
+    };
+    const onAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const v = sanitizeAmount(e.target.value);
+        setAmount(v);
+        saveDraft({ amount: v });
+    };
 
-      {/* categories */}
-      <div className="category-row">
-        <button className={`cat ${category === "อาหาร" ? "active" : ""}`}
-          onClick={() => { setCategory("อาหาร"); saveDraft({ category: "อาหาร" }); }}>
-          <Utensils className={`icon ${category === "อาหาร" ? "icon-active" : ""} lucide`} size={20} strokeWidth={2} /><span>อาหาร</span>
-        </button>
-        <button className={`cat ${category === "ค่าเดินทาง" ? "active" : ""}`}
-          onClick={() => { setCategory("ค่าเดินทาง"); saveDraft({ category: "ค่าเดินทาง" }); }}>
-          <Car className={`icon ${category === "ค่าเดินทาง" ? "icon-active" : ""} lucide`} size={20} strokeWidth={2} /><span>ค่าเดินทาง</span>
-        </button>
-        <button className={`cat ${category === "ของขวัญ" ? "active" : ""}`}
-          onClick={() => { setCategory("ของขวัญ"); saveDraft({ category: "ของขวัญ" }); }}>
-          <Gift className={`icon ${category === "ของขวัญ" ? "icon-active" : ""} lucide`} size={20} strokeWidth={2} /><span>ของขวัญ</span>
-        </button>
-        <button className={`cat ${category === "อื่นๆ" ? "active" : ""}`}
-          onClick={() => { setCategory("อื่นๆ"); saveDraft({ category: "อื่นๆ" }); navigate("/customoutcome"); }}>
-          <OtherIcon className={`icon ${category === "อื่นๆ" ? "icon-active" : ""} lucide`} size={20} strokeWidth={2} />
-          <span>{otherLabel}</span>
-        </button>
-      </div>
+    const resetForm = () => {
+        setCategory("อาหาร"); setAmount("0"); setNote(""); setPlace("");
+        setDt(getNowLocalDT());
+        clearTempCategory(); if (typeof clearPayment === "function") clearPayment();
+        sessionStorage.removeItem(DRAFT_KEY);
+        sessionStorage.removeItem("edit_id_expense");
+    };
 
-      {/* amount */}
-      <div className="amount">
-        <input
-          className="amount-input"
-          value={amount}
-          onChange={onAmountChange}
-          onFocus={(e) => e.currentTarget.select()}
-          inputMode="decimal"
-          enterKeyHint="done"
-          aria-label="จำนวนเงิน"
-          spellCheck={false}
-          size={Math.max(1, amount.length)}
-        />
-        <span className="currency">฿</span>
-      </div>
+    const onConfirm = async () => {
+        if (!amount || amount === "0" || !place.trim() || !dt) {
+            alert("Required ❌");
+            return;
+        }
 
-      {/* segments: datetime + payment */}
-      <div className="segments" style={{ position: "relative", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <button
-          type="button"
-          className="seg date-seg"
-          onClick={openDateTimePicker}
-          onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && openDateTimePicker(e)}
-          style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", position: "relative" }}
-        >
-          <CalendarDays className="icon" size={18} />
-          <span>{dt ? formatDateTimeThai(dt) : "วัน / เดือน / ปี เวลา"}</span>
+        const finalCategory =
+            category === "อื่นๆ" && tempCategory?.name ? tempCategory.name : category;
 
-          <input
-            ref={dtRef}
-            type="datetime-local"
-            value={dt}
-            onChange={(e) => { const v = e.target.value; setDt(v); saveDraft({ dt: v }); }}
-            style={{ position: "absolute", inset: 0, opacity: 0, pointerEvents: "none" }}
-            tabIndex={-1}
-            aria-hidden="true"
-          />
-        </button>
+        const iconKey =
+            category === "อื่นๆ" ? (tempCategory?.iconKey || "more") : defaultIconKeyByCategory[category];
 
-        <button className="seg" onClick={() => {
-          saveDraft({ category, amount, note, place, dt });
-          navigate("/accountselect");
-        }}>
-          {payment?.name ?? "ประเภทการชำระเงิน"}
-        </button>
-      </div>
+        const dateOnly = dt.slice(0, 10);
+        const occurredAtISO = new Date(`${dt}:00`).toISOString();
 
-      {/* inputs */}
-      <div className="inputs">
-        <div className="input">
-          <ClipboardList size={18} strokeWidth={2} className="icon" />
-          <input
-            value={note}
-            onChange={(e) => { const v = e.target.value; setNote(v); saveDraft({ note: v }); }}
-            onBlur={() => saveDraft({ note })}
-            placeholder="โน้ต"
-          />
-        </div>
-        <div className="input">
-          <MapPin size={18} strokeWidth={2} className="icon" />
-          <input
-            value={place}
-            onChange={(e) => { const v = e.target.value; setPlace(v); saveDraft({ place: v }); }}
-            onBlur={() => saveDraft({ place })}
-            placeholder="สถานที่"
-          />
+        const payload = {
+            type: "ค่าใช้จ่าย",
+            category: finalCategory,
+            amount: parseFloat(amount || "0"),
+            note,
+            place,
+            date: dateOnly,
+            occurredAt: occurredAtISO,
+            paymentMethod: payment?.name ?? null,
+            iconKey,
+        };
+
+        const editId = sessionStorage.getItem("edit_id_expense");
+        const isEdit = !!editId;
+        const url = isEdit ? `${API_BASE}/api/expenses/${editId}` : `${API_BASE}/api/expenses`;
+        const method = isEdit ? "PUT" : "POST";
+
+        try {
+            const res = await fetch(url, {
+                method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+                credentials: "include",
+            });
+            if (!res.ok) throw new Error(await res.text());
+            alert(isEdit ? "แก้ไขเรียบร้อย " : "บันทึกเรียบร้อย ");
+            resetForm();
+            navigate("/summary");
+        } catch (err: any) {
+            console.error(err);
+            alert("บันทึกไม่สำเร็จ ❌ " + (err?.message ?? ""));
+        }
+    };
+
+    const formatDateTimeThai = (localDT: string) => {
+        if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(localDT)) return "วัน / เดือน / ปี เวลา";
+        const [d, t] = localDT.split("T");
+        const [y, m, dd] = d.split("-");
+        return `${dd}/${m}/${y} ${t} น.`;
+    };
+
+    const otherLabel = tempCategory?.name || "อื่นๆ";
+    const OtherIcon =
+        (tempCategory?.iconKey && customIconByKey[tempCategory.iconKey]) || customIconByKey["more"];
+
+    return (
+        <div className="calc-wrap">
+            {/* type switch */}
+            <div className="type-pill" style={{ position: "relative" }}>
+                <button className="pill" onClick={() => setTypeOpen(o => !o)}>
+                    <span>{entryType}</span><ChevronDown />
+                </button>
+                {typeOpen && (
+                    <div onMouseLeave={() => setTypeOpen(false)}
+                         style={{
+                             position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#fff",
+                             border: "1px solid rgba(0,0,0,.06)", borderRadius: 14, boxShadow: "0 10px 20px rgba(0,0,0,.08)", padding: 6, minWidth: 200, zIndex: 20
+                         }}>
+                        {menuOptions.map(op => (
+                            <button key={op} onClick={() => onSelectType(op)}
+                                    style={{ width: "100%", textAlign: "center", padding: "10px 12px", border: 0, background: "transparent", borderRadius: 10, cursor: "pointer", fontWeight: 600, color: "var(--ink)" as any }}
+                                    onMouseEnter={e => e.currentTarget.style.background = "#f3fbf8"}
+                                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                                {op}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* categories */}
+            <div className="category-row">
+                <button className={`cat ${category === "อาหาร" ? "active" : ""}`}
+                        onClick={() => { setCategory("อาหาร"); saveDraft({ category: "อาหาร" }); }}>
+                    <Utensils className={`icon ${category === "อาหาร" ? "icon-active" : ""} lucide`} size={20} strokeWidth={2} /><span>อาหาร</span>
+                </button>
+                <button className={`cat ${category === "ค่าเดินทาง" ? "active" : ""}`}
+                        onClick={() => { setCategory("ค่าเดินทาง"); saveDraft({ category: "ค่าเดินทาง" }); }}>
+                    <Car className={`icon ${category === "ค่าเดินทาง" ? "icon-active" : ""} lucide`} size={20} strokeWidth={2} /><span>ค่าเดินทาง</span>
+                </button>
+                <button className={`cat ${category === "ของขวัญ" ? "active" : ""}`}
+                        onClick={() => { setCategory("ของขวัญ"); saveDraft({ category: "ของขวัญ" }); }}>
+                    <Gift className={`icon ${category === "ของขวัญ" ? "icon-active" : ""} lucide`} size={20} strokeWidth={2} /><span>ของขวัญ</span>
+                </button>
+                <button className={`cat ${category === "อื่นๆ" ? "active" : ""}`}
+                        onClick={() => { setCategory("อื่นๆ"); saveDraft({ category: "อื่นๆ" }); navigate("/customoutcome"); }}>
+                    <OtherIcon className={`icon ${category === "อื่นๆ" ? "icon-active" : ""} lucide`} size={20} strokeWidth={2} />
+                    <span>{otherLabel}</span>
+                </button>
+            </div>
+
+            {/* amount */}
+            <div className="amount">
+                <input
+                    className="amount-input"
+                    value={amount}
+                    onChange={onAmountChange}
+                    onFocus={(e) => e.currentTarget.select()}
+                    inputMode="decimal"
+                    enterKeyHint="done"
+                    aria-label="จำนวนเงิน"
+                    spellCheck={false}
+                    size={Math.max(1, amount.length)}
+                />
+                <span className="currency">฿</span>
+            </div>
+
+            {/* segments: datetime + payment */}
+            <div className="segments" style={{ position: "relative", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <button
+                    type="button"
+                    className="seg date-seg"
+                    onClick={openDateTimePicker}
+                    onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && openDateTimePicker(e)}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", position: "relative" }}
+                >
+                    <CalendarDays className="icon" size={18} />
+                    <span>{dt ? formatDateTimeThai(dt) : "วัน / เดือน / ปี เวลา"}</span>
+
+                    <input
+                        ref={dtRef}
+                        type="datetime-local"
+                        value={dt}
+                        onChange={(e) => { const v = e.target.value; setDt(v); saveDraft({ dt: v }); }}
+                        style={{ position: "absolute", inset: 0, opacity: 0, pointerEvents: "none" }}
+                        tabIndex={-1}
+                        aria-hidden="true"
+                    />
+                </button>
+
+                <button className="seg" onClick={() => {
+                    saveDraft({ category, amount, note, place, dt });
+                    navigate("/accountselect");
+                }}>
+                    {payment?.name ?? "ประเภทการชำระเงิน"}
+                </button>
+            </div>
+
+            {/* inputs */}
+            <div className="inputs">
+                <div className="input">
+                    <ClipboardList size={18} strokeWidth={2} className="icon" />
+                    <input
+                        value={note}
+                        onChange={(e) => { const v = e.target.value; setNote(v); saveDraft({ note: v }); }}
+                        onBlur={() => saveDraft({ note })}
+                        placeholder="โน้ต"
+                    />
+                </div>
+                <div className="input" onClick={() => navigate("/location")} style={{ cursor: "pointer" }}>
+                    <MapPin size={18} strokeWidth={2} className="icon" />
+                    <input
+                        value={place}
+                        readOnly
+                        placeholder="สถานที่"
+                    />
+                </div>
+            </div>
+
+            {/* keypad */}
+            <div className="keypad">
+                {pad.map((k, i) => (
+                    <button key={i} className={`key ${k === "⌫" ? "danger" : ""}`} onClick={() => onTapKey(k)}>
+                        {k === "⌫" ? <IconBackspace /> : k}
+                    </button>
+                ))}
+            </div>
+
+            <div className="confirm">
+                <button className="ok-btn" onClick={onConfirm}><IconCheck /></button>
+            </div>
+
+            <BottomNav />
         </div>
     );
 }
