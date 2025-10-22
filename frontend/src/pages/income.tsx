@@ -22,10 +22,9 @@ import { useEditPrefill } from "../hooks/useEditPrefill";
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string) || "http://localhost:8081";
 
-/* UI icons */
 const ChevronDown = () => (
     <svg viewBox="0 0 24 24" className="icon">
-        <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
 );
 const IconEtc = ({ active = false }: { active?: boolean }) => (
@@ -38,16 +37,15 @@ const IconEtc = ({ active = false }: { active?: boolean }) => (
 const IconBackspace = () => (
     <svg viewBox="0 0 24 24" className="icon">
         <path d="M4 12 9 6h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9L4 12Zm6-3 6 6m0-6-6 6"
-              stroke="currentColor" strokeWidth="1.7" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+              stroke="currentColor" strokeWidth="1.7" fill="none" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
 );
 const IconCheck = () => (
     <svg viewBox="0 0 24 24" className="icon">
-        <path d="m5 12 4 4 10-10" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="m5 12 4 4 10-10" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
 );
 
-/** รายได้เท่านั้น */
 type Category = "ค่าขนม" | "ทำงาน" | "ลงทุน" | "อื่นๆ";
 
 const ICON_MAP: Record<string, React.FC<any>> = {
@@ -65,15 +63,14 @@ const ICON_MAP: Record<string, React.FC<any>> = {
 
 const getTodayISO = () => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 };
 const getNowHHMM = () => {
     const now = new Date();
-    return `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+    return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 };
 const getNowLocalDT = () => `${getTodayISO()}T${getNowHHMM()}`;
 
-/** iconKey มาตรฐานสำหรับหมวดรายได้ */
 const defaultIconKeyByCategory: Record<Category, string> = {
     "ค่าขนม": "HandCoins",
     "ทำงาน": "Banknote",
@@ -81,7 +78,6 @@ const defaultIconKeyByCategory: Record<Category, string> = {
     "อื่นๆ": "more",
 };
 
-/* ----- draft helpers ----- */
 const DRAFT_KEY = "income_draft_v2";
 const safeParse = (raw: any) => { try { return JSON.parse(raw ?? ""); } catch { return {}; } };
 const readDraftNow = () => safeParse(sessionStorage.getItem(DRAFT_KEY));
@@ -95,18 +91,16 @@ export default function Income() {
     const location = useLocation();
     const { payment, setPayment } = usePaymentMethod();
 
-    // hydrate draft ก่อน render
     const initial = readDraftNow();
 
-    const [category, setCategory]   = useState<Category>(() => initial.category ?? "ค่าขนม");
+    const [category, setCategory] = useState<Category>(() => initial.category ?? "ค่าขนม");
     const [customCat, setCustomCat] = useState<{ label: string; icon?: string } | null>(() => initial.customCat ?? null);
-    const [amount, setAmount]       = useState<string>(() => initial.amount ?? "0");
-    const [note, setNote]           = useState<string>(() => initial.note ?? "");
-    const [place, setPlace]         = useState<string>(() => initial.place ?? "");
-    const [dt, setDt]               = useState<string>(() => initial.dt ?? getNowLocalDT());
-    const [menuOpen, setMenuOpen]   = useState(false);
+    const [amount, setAmount] = useState<string>(() => initial.amount ?? "0");
+    const [note, setNote] = useState<string>(() => initial.note ?? "");
+    const [place, setPlace] = useState<string>(() => initial.place ?? "");
+    const [dt, setDt] = useState<string>(() => initial.dt ?? getNowLocalDT());
+    const [menuOpen, setMenuOpen] = useState(false);
 
-    // Prefill แก้ไขจาก Summary (ใช้ key edit_id_income)
     useEditPrefill((d) => {
         setCategory((d.category as Category) ?? "ค่าขนม");
         setCustomCat(null);
@@ -116,13 +110,10 @@ export default function Income() {
         setDt(d.datetime || `${d.date}T${getNowHHMM()}`);
     }, "edit_id_income");
 
-    // กู้ payment draft
     useEffect(() => {
         if (initial.payment && !payment) setPayment(initial.payment);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // รับค่าหมวด custom จาก /customincome
     useEffect(() => {
         const st = location.state as any;
         if (st?.customIncome) {
@@ -133,7 +124,6 @@ export default function Income() {
         }
     }, [location.state, navigate]);
 
-    // ปรับปรุง amount: พิมพ์ได้ + แป้นตัวเลข
     const sanitizeAmount = (raw: string) => {
         let v = raw.replace(/[^\d.]/g, "");
         const parts = v.split(".");
@@ -148,17 +138,16 @@ export default function Income() {
         saveDraft({ amount: v });
     };
 
-    const pad = useMemo(() => ["1","2","3","4","5","6","7","8","9",".","0","⌫"], []);
+    const pad = useMemo(() => ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "⌫"], []);
     const onTapKey = (k: string) => {
         let next = amount;
-        if (k === "⌫") next = next.length <= 1 ? "0" : next.slice(0,-1);
+        if (k === "⌫") next = next.length <= 1 ? "0" : next.slice(0, -1);
         else if (k === ".") next = next.includes(".") ? next : next + ".";
         else next = next === "0" ? k : next + k;
         setAmount(next);
         saveDraft({ amount: next });
     };
 
-    // datetime picker
     const dtRef = useRef<HTMLInputElement>(null);
     const openDateTimePicker = (e?: React.MouseEvent | React.KeyboardEvent) => {
         e?.preventDefault();
@@ -168,7 +157,6 @@ export default function Income() {
         else { el.click(); el.focus(); }
     };
 
-    // ดึงสถานที่กลับมาหลังไป /location
     useEffect(() => {
         const onFocus = () => {
             const name = sessionStorage.getItem("selectedPlaceName");
@@ -190,32 +178,23 @@ export default function Income() {
         sessionStorage.removeItem("edit_id_income");
     };
 
-    // ส่งเข้า Backend
     const onConfirm = async () => {
-        // note ไม่บังคับ
         if (!amount || amount === "0" || !place.trim() || !dt) {
             alert("Required ❌"); return;
         }
-        const finalCategory =
-            category === "อื่นๆ" && customCat?.label ? customCat.label : category;
-
-        const iconKey =
-            category === "อื่นๆ"
-                ? (customCat?.icon || "more")
-                : defaultIconKeyByCategory[category];
-
-        const dateOnly = dt.slice(0,10);
+        const finalCategory = category === "อื่นๆ" && customCat?.label ? customCat.label : category;
+        const iconKey = category === "อื่นๆ" ? (customCat?.icon || "more") : defaultIconKeyByCategory[category];
+        const dateOnly = dt.slice(0, 10);
         const occurredAtISO = new Date(`${dt}:00`).toISOString();
 
-        // <<< สำคัญ: ให้ตรงกับ Enum ฝั่ง Spring (EntryType.INCOME)
         const payload = {
-            type: "INCOME",
+            type: "รายได้",
             category: finalCategory,
             amount: parseFloat(amount || "0"),
-            note,              // อนุญาตให้เป็น "" ได้
+            note,
             place,
-            date: dateOnly,    // LocalDate
-            occurredAt: occurredAtISO, // OffsetDateTime
+            date: dateOnly,
+            occurredAt: occurredAtISO,
             paymentMethod: payment?.name ?? null,
             iconKey,
         };
@@ -236,7 +215,7 @@ export default function Income() {
             alert(isEdit ? "แก้ไขเรียบร้อย ✅" : "บันทึกเรียบร้อย ✅");
             resetAll();
             navigate("/summary");
-        } catch (e:any) {
+        } catch (e: any) {
             console.error(e);
             alert("บันทึกไม่สำเร็จ ❌ " + (e?.message ?? ""));
         }
@@ -260,72 +239,70 @@ export default function Income() {
         <div className="calc-wrap">
             <header className="topbar"></header>
 
-            {/* สลับหน้า (รายได้/ค่าใช้จ่าย) */}
-            <div className="type-pill" style={{ position:"relative" }}>
-                <button className="pill" onClick={() => setMenuOpen(o=>!o)}>
-                    <span>รายได้</span><ChevronDown/>
+            <div className="type-pill" style={{ position: "relative" }}>
+                <button className="pill" onClick={() => setMenuOpen(o => !o)}>
+                    <span>รายได้</span><ChevronDown />
                 </button>
                 {menuOpen && (
                     <div
                         onMouseLeave={() => setMenuOpen(false)}
-                        style={{position:"absolute",top:"calc(100% + 8px)",left:"50%",transform:"translateX(-50%)",background:"#fff",
-                            border:"1px solid rgba(0,0,0,.06)",borderRadius:14,boxShadow:"0 10px 20px rgba(0,0,0,.08)",padding:6,minWidth:220,zIndex:20}}>
+                        style={{
+                            position: "absolute", top: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#fff",
+                            border: "1px solid rgba(0,0,0,.06)", borderRadius: 14, boxShadow: "0 10px 20px rgba(0,0,0,.08)", padding: 6, minWidth: 220, zIndex: 20
+                        }}>
                         <button
-                            onClick={()=>navigate("/expense")}
-                            style={{width:"100%",textAlign:"center",padding:"10px 12px",border:0,background:"transparent",borderRadius:10,cursor:"pointer",fontWeight:600,color:"var(--ink)" as any}}
-                            onMouseEnter={e=>e.currentTarget.style.background="#f3fbf8"}
-                            onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                            onClick={() => navigate("/expense")}
+                            style={{ width: "100%", textAlign: "center", padding: "10px 12px", border: 0, background: "transparent", borderRadius: 10, cursor: "pointer", fontWeight: 600, color: "var(--ink)" as any }}
+                            onMouseEnter={e => e.currentTarget.style.background = "#f3fbf8"}
+                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                             ค่าใช้จ่าย
                         </button>
                     </div>
                 )}
             </div>
 
-            {/* หมวด */}
             <div className="category-row">
-                <button className={`cat ${category==="ค่าขนม"?"active":""}`} onClick={()=>{ setCategory("ค่าขนม"); setCustomCat(null); saveDraft({ category:"ค่าขนม", customCat:null }); }}>
-                    <HandCoins className={`icon ${category==="ค่าขนม"?"icon-active":""} lucide`} size={20} strokeWidth={2} />
+                <button className={`cat ${category === "ค่าขนม" ? "active" : ""}`} onClick={() => { setCategory("ค่าขนม"); setCustomCat(null); saveDraft({ category: "ค่าขนม", customCat: null }); }}>
+                    <HandCoins className={`icon ${category === "ค่าขนม" ? "icon-active" : ""} lucide`} size={20} strokeWidth={2} />
                     <span>ค่าขนม</span>
                 </button>
-                <button className={`cat ${category==="ทำงาน"?"active":""}`} onClick={()=>{ setCategory("ทำงาน"); setCustomCat(null); saveDraft({ category:"ทำงาน", customCat:null }); }}>
-                    <Banknote className={`icon ${category==="ทำงาน"?"icon-active":""} lucide`} size={20} strokeWidth={2} />
+                <button className={`cat ${category === "ทำงาน" ? "active" : ""}`} onClick={() => { setCategory("ทำงาน"); setCustomCat(null); saveDraft({ category: "ทำงาน", customCat: null }); }}>
+                    <Banknote className={`icon ${category === "ทำงาน" ? "icon-active" : ""} lucide`} size={20} strokeWidth={2} />
                     <span>ทำงาน</span>
                 </button>
-                <button className={`cat ${category==="ลงทุน"?"active":""}`} onClick={()=>{ setCategory("ลงทุน"); setCustomCat(null); saveDraft({ category:"ลงทุน", customCat:null }); }}>
-                    <Bitcoin className={`icon ${category==="ลงทุน"?"icon-active":""} lucide`} size={20} strokeWidth={2} />
+                <button className={`cat ${category === "ลงทุน" ? "active" : ""}`} onClick={() => { setCategory("ลงทุน"); setCustomCat(null); saveDraft({ category: "ลงทุน", customCat: null }); }}>
+                    <Bitcoin className={`icon ${category === "ลงทุน" ? "icon-active" : ""} lucide`} size={20} strokeWidth={2} />
                     <span>ลงทุน</span>
                 </button>
-                <button className={`cat ${category==="อื่นๆ"?"active":""}`} onClick={()=>{ setCategory("อื่นๆ"); saveDraft({ category:"อื่นๆ" }); navigate("/customincome"); }}>
+                <button className={`cat ${category === "อื่นๆ" ? "active" : ""}`} onClick={() => { setCategory("อื่นๆ"); saveDraft({ category: "อื่นๆ" }); navigate("/customincome"); }}>
                     {renderCustomIcon()}
-                    <span>{category==="อื่นๆ" && customCat?.label ? customCat.label : "อื่นๆ"}</span>
+                    <span>{category === "อื่นๆ" && customCat?.label ? customCat.label : "อื่นๆ"}</span>
                 </button>
             </div>
 
-            {/* จำนวนเงิน (พิมพ์ได้ + กลางจอ) */}
-            <div className="amount" style={{ display:"flex", alignItems:"baseline", justifyContent:"center", gap:6, width:"100%" }}>
+            <div className="amount" style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 6, width: "100%" }}>
                 <input
                     className="amount-input"
                     value={amount}
                     onChange={onAmountChange}
-                    onFocus={(e)=> e.currentTarget.select() }
+                    onFocus={(e) => e.currentTarget.select()}
                     inputMode="decimal"
                     enterKeyHint="done"
                     aria-label="จำนวนเงิน"
                     spellCheck={false}
                     size={Math.max(1, amount.length)}
-                    style={{ textAlign:"center", background:"transparent", border:"none", outline:"none", fontWeight:800, fontSize:"clamp(40px, 8vw, 64px)", lineHeight:1, color:"var(--ink, #0a0a0a)" }}
+                    style={{ textAlign: "center", background: "transparent", border: "none", outline: "none", fontWeight: 800, fontSize: "clamp(40px, 8vw, 64px)", lineHeight: 1, color: "var(--ink, #0a0a0a)" }}
                 />
-                <span className="currency" style={{ fontWeight:800, fontSize:"clamp(28px, 5vw, 40px)", lineHeight:1 }}>฿</span>
+                <span className="currency" style={{ fontWeight: 800, fontSize: "clamp(28px, 5vw, 40px)", lineHeight: 1 }}>฿</span>
             </div>
 
-            {/* วันเวลา + วิธีชำระเงิน */}
-            <div className="segments" style={{ position:"relative", display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            <div className="segments" style={{ position: "relative", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <button
                     type="button"
                     className="seg date-seg"
                     onClick={openDateTimePicker}
                     onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && openDateTimePicker(e)}
-                    style={{ display:"inline-flex", alignItems:"center", gap:6, cursor:"pointer", position:"relative" }}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", position: "relative" }}
                 >
                     <CalendarDays className="icon" size={18} />
                     <span>{dt ? formatDateTimeThai(dt) : "วัน / เดือน / ปี เวลา"}</span>
@@ -334,8 +311,8 @@ export default function Income() {
                         ref={dtRef}
                         type="datetime-local"
                         value={dt}
-                        onChange={(e)=>{ const v = e.target.value; setDt(v); saveDraft({ dt: v }); }}
-                        style={{ position:"absolute", inset:0, opacity:0, pointerEvents:"none" }}
+                        onChange={(e) => { const v = e.target.value; setDt(v); saveDraft({ dt: v }); }}
+                        style={{ position: "absolute", inset: 0, opacity: 0, pointerEvents: "none" }}
                         tabIndex={-1}
                         aria-hidden="true"
                     />
@@ -343,45 +320,42 @@ export default function Income() {
 
                 <button
                     className="seg"
-                    onClick={()=>{
+                    onClick={() => {
                         saveDraft({ category, customCat, amount, note, place, dt, payment });
-                        navigate("/accountselect", { state:{ from:"/income" } });
+                        navigate("/accountselect", { state: { from: "/income" } });
                     }}
                 >
                     {payment ? payment.name : "ประเภทการชำระเงิน"}
                 </button>
             </div>
 
-            {/* โน้ต + เลือกสถานที่ (ไปหน้า /location แล้วดึงกลับ) */}
             <div className="inputs">
                 <div className="input">
-                    <ClipboardList size={18} strokeWidth={2} className="icon"/>
+                    <ClipboardList size={18} strokeWidth={2} className="icon" />
                     <input
                         value={note}
-                        onChange={(e)=>{ const v=e.target.value; setNote(v); saveDraft({ note: v }); }}
-                        onBlur={()=> saveDraft({ note })}
+                        onChange={(e) => { const v = e.target.value; setNote(v); saveDraft({ note: v }); }}
+                        onBlur={() => saveDraft({ note })}
                         placeholder="โน้ต (ไม่บังคับ)"
                     />
                 </div>
 
-                {/* ใช้แบบเดียวกับ Expense: คลิกทั้งแถบเพื่อไปเลือกสถานที่ */}
-                <div className="input" onClick={() => navigate("/location")} style={{ cursor:"pointer" }}>
-                    <MapPin size={18} strokeWidth={2} className="icon"/>
+                <div className="input" onClick={() => navigate("/location")} style={{ cursor: "pointer" }}>
+                    <MapPin size={18} strokeWidth={2} className="icon" />
                     <input value={place} readOnly placeholder="สถานที่" />
                 </div>
             </div>
 
-            {/* keypad */}
             <div className="keypad">
-                {pad.map((k,i)=>(
-                    <button key={i} className={`key ${k==="⌫"?"danger":""}`} onClick={()=> (k==="⌫"? onTapKey("⌫"): onTapKey(k))}>
-                        {k==="⌫"? <IconBackspace/> : k}
+                {pad.map((k, i) => (
+                    <button key={i} className={`key ${k === "⌫" ? "danger" : ""}`} onClick={() => (k === "⌫" ? onTapKey("⌫") : onTapKey(k))}>
+                        {k === "⌫" ? <IconBackspace /> : k}
                     </button>
                 ))}
             </div>
 
-            <div className="confirm"><button className="ok-btn" onClick={onConfirm}><IconCheck/></button></div>
-            <BottomNav/>
+            <div className="confirm"><button className="ok-btn" onClick={onConfirm}><IconCheck /></button></div>
+            <BottomNav />
         </div>
     );
 }
