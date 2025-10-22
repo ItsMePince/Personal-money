@@ -195,47 +195,48 @@ export default function App() {
 
         <Route 
           path="/summary" 
+
           element={
             <ProtectedRoute>
               <Summary />
             </ProtectedRoute>
-          } 
+          }
         />
 
         {/* Account Routes - ต้อง login ก่อน */}
-        <Route 
-          path="/accountselect" 
+        <Route
+          path="/accountselect"
           element={
             <ProtectedRoute>
               <AccountSelect />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/accountnew" 
+        <Route
+          path="/accountnew"
           element={
             <ProtectedRoute>
               <AccountNew />
             </ProtectedRoute>
-          } 
+          }
         />
 
         {/* Custom category Routes - ต้อง login ก่อน */}
-        <Route 
-          path="/customincome" 
+        <Route
+          path="/customincome"
           element={
             <ProtectedRoute>
               <CustomIncome />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/customoutcome" 
+        <Route
+          path="/customoutcome"
           element={
             <ProtectedRoute>
               <CustomOutcome />
             </ProtectedRoute>
-          } 
+          }
         />
 
         {/* 404 */}
